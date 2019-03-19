@@ -184,13 +184,13 @@ def index():
 
 
 # Example of adding new data to the database
-@app.route('/add', methods=['POST'])
-def add():
-    name = request.form['name']
-    print name
-    cmd = 'INSERT INTO test(name) VALUES (:name1), (:name2)';
-    g.conn.execute(text(cmd), name1 = name, name2 = name);
-    return redirect('/')
+# @app.route('/add', methods=['POST'])
+# def add():
+#     name = request.form['name']
+#     print name
+#     cmd = 'INSERT INTO test(name) VALUES (:name1), (:name2)';
+#     g.conn.execute(text(cmd), name1 = name, name2 = name);
+#     return redirect('/')
 
 
 @app.route('/login', methods=['POST'])
@@ -200,8 +200,7 @@ def login():
     session['password'] = request.form['password']
 
     # Check if username exists in Database (case sensitive)
-    username_query = "SELECT name, password, admin_flag from Users where name = \'{}\'" .format(session['username'])
-    cursor = g.conn.execute(username_query)
+    cursor = g.conn.execute("SELECT name, password, admin_flag FROM Users WHERE name = %s", (session['username']))
 
     if cursor.rowcount == 0:
         # Create username not found string
@@ -213,7 +212,6 @@ def login():
         result = cursor.fetchone()
         db_user['password'] = result['password']
         db_user['admin'] = result['admin_flag']
-        print(db_user)
         cursor.close()
 
         if session['password'] == db_user['password']:
@@ -230,6 +228,49 @@ def logout():
     session.pop('password', None)
     session['logged_in'] = False
     return index()
+
+
+@app.route('/create', method=['POST'])
+def create_user():
+
+    # helper functions
+    def check_username(username):
+        if username.isalnum():
+            return True
+        else:
+            return False
+
+    def check_password(password, confirm_password):
+        if len(password) >= 6 and password == confirm_password:
+            return True
+        else:
+            return False
+
+    username = str(request.form['username'])
+    password = str(request.form['password'])
+    confirm_pass = str(request.form['confirm_password'])
+    fav_team = request.form['fav_team']
+    admin_flag = str(0)
+
+    if check_username(username) and check_password(password, confirm_pass):
+        # Check if username exists
+        user_cursor = g.conn.execute("SELECT name FROM Users WHERE name = %s", username)
+        if not user_cursor.rowcount:
+            # Get max existing id
+            #   # Note: Change schema of tables to make IDs serialized
+            id_cursor = g.conn.execute("SELECT MAX(userid) AS maxid FROM Users")
+            result = id_cursor.fetchone()
+            id_cursor.close()
+            max_id = int(result['maxid'])
+            curr_id = max_id + 1
+
+            # Insert record
+            g.conn.execute("""  INSERT INTO Users(userid, name, password, admin_flag, tid) 
+                                VALUES (%d, %s, %s, %s, %d),
+                                (curr_id, username, password, admin_flag, fav_team)  """)
+
+            flash("Account created. You may now login")
+        user_cursor.close()
 
 
 if __name__ == "__main__":

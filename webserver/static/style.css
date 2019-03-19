@@ -76,3 +76,10 @@ color: #444;
 display: block;
 margin-top: 12px;
 }
+
+.flash-message {
+text-align: center;
+color: #ffffff;
+font-weight: bold;
+margin: 20px;
+}

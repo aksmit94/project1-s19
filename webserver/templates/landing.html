@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <!--<title>Bloody Ashes</title>-->
 </head>
+
 {% block body %}
 {% if session['logged_in'] %}
     You're already logged in :)
@@ -29,6 +30,18 @@
             </div>
         </div>
     </form>
+
+    <!--Flash messages-->
+    <div class="flash-message">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    {{ message }}
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
 {% endif %}
 {% endblock %}
 </html>
