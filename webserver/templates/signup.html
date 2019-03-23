@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<link rel="stylesheet" href="/static/style.css" type="text/css">
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <!--<title>Sign up for Bloody Ashes</title>-->
+    </head>
+
+    {% block body %}
+        <form action="/signup" method="POST">
+            <div class="login">
+                <div class="login-screen">
+                    <div class="app-title">
+                       <h1>Sign up for Bloody Ashes</h1>
+                    </div>
+                    <div class="login-form">
+                        <div class="control-group">
+                           <input type="text" class="login-field" value="" placeholder="username" name="username">
+                           <label class="login-field-icon fui-user" for="login-name"></label>
+                        </div>
+                        <div class="control-group">
+                            <input type="password" class="login-field" value="" placeholder="password" name="password">
+                            <label class="login-field-icon fui-lock" for="login-pass"></label>
+                        </div>
+                        <div class="control-group">
+                            <input type="password" class="login-field" value="" placeholder="confirm password" name="confirm_password">
+                            <label class="login-field-icon fui-lock" for="login-confirm-pass"></label>
+                        </div>
+                        <div class="control-group">
+                            <p class="app-title">Choose favorite team:</p>
+                            <select class="select" style="height:40px; width:250px;" name="favorite_team">
+                                <option value="1">Kolkata Knightriders</option>
+                                <option value="10">Pune Warriors</option>
+                            </select>
+                        </div>
+                        <input type="submit" value="Create User" class="btn btn-large btn-block">
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <!--Flash messages-->
+        <div class="flash-message">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        {{ message }}
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+    {% endblock %}
+</html>

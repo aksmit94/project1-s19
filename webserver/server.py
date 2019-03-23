@@ -227,50 +227,82 @@ def logout():
     session.pop('username', None)
     session.pop('password', None)
     session['logged_in'] = False
-    return index()
+    return redirect('/')
 
 
-@app.route('/create', method=['POST'])
-def create_user():
+@app.route('/signup')
+def signup():
+    return render_template('signup.html')
+
+
+@app.route('/signup', methods=['POST'])
+def signup_form():
 
     # helper functions
     def check_username(username):
-        if username.isalnum():
-            return True
-        else:
-            return False
+        return username.isalnum()
 
     def check_password(password, confirm_password):
-        if len(password) >= 6 and password == confirm_password:
-            return True
+        if len(password) < 6:
+            return 0
+        elif password != confirm_password:
+            return 1
         else:
-            return False
+            return 2
 
     username = str(request.form['username'])
     password = str(request.form['password'])
     confirm_pass = str(request.form['confirm_password'])
-    fav_team = request.form['fav_team']
+    fav_team = int(request.form['favorite_team'])
     admin_flag = str(0)
 
-    if check_username(username) and check_password(password, confirm_pass):
-        # Check if username exists
-        user_cursor = g.conn.execute("SELECT name FROM Users WHERE name = %s", username)
-        if not user_cursor.rowcount:
-            # Get max existing id
-            #   # Note: Change schema of tables to make IDs serialized
-            id_cursor = g.conn.execute("SELECT MAX(userid) AS maxid FROM Users")
-            result = id_cursor.fetchone()
-            id_cursor.close()
-            max_id = int(result['maxid'])
-            curr_id = max_id + 1
+    print('---------------------------------------'
+          '----------------------------------------'
+          '----------------------------------')
+    print("Username= ", username, "\n password= ",
+          password, "\n confirm pass: ", confirm_pass,
+          '\n favorite tid: ', str(fav_team))
+    print('-------------------------------------------'
+          '--------------------------------------------'
+          '--------------------------')
 
-            # Insert record
-            g.conn.execute("""  INSERT INTO Users(userid, name, password, admin_flag, tid) 
-                                VALUES (%d, %s, %s, %s, %d),
-                                (curr_id, username, password, admin_flag, fav_team)  """)
+    # Check username
+    if not check_username(username):
+        flash("Username should be Alpha-Numeric")
+        return redirect('/signup')
 
-            flash("Account created. You may now login")
-        user_cursor.close()
+    # Check password
+    check = check_password(password, confirm_pass)
+    if check != 2:
+        if check == 0:
+            flash("Password length should be 6 or more")
+        else:
+            flash("Passwords do not match")
+        return redirect('/signup')
+
+    # Check if username exists
+    user_cursor = g.conn.execute("SELECT name FROM Users WHERE name = %s", username)
+    if not user_cursor.rowcount:
+        # Get max existing id
+        #   # Note: Change schema of tables to make IDs serialized
+        id_cursor = g.conn.execute("SELECT MAX(userid) AS maxid FROM Users")
+        result = id_cursor.fetchone()
+        id_cursor.close()
+        max_id = int(result['maxid'])
+        curr_id = max_id + 1
+
+        # Insert query
+        cmd = """INSERT INTO Users(userid, name, password, admin_flag, tid) 
+                VALUES (:userid, :name, :password, :admin_flag, :fav_team)"""
+        g.conn.execute(text(cmd), userid=curr_id, name=username, password=password,
+                       admin_flag=admin_flag, fav_team=fav_team)
+        flash("Account created. You may now login")
+    else:
+        flash("Username already taken :(")
+        return redirect('/signup')
+    user_cursor.close()
+
+    return redirect('/')
 
 
 if __name__ == "__main__":
