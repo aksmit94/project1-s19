@@ -232,7 +232,18 @@ def logout():
 
 @app.route('/signup')
 def signup():
-    return render_template('signup.html')
+
+    # Get team list to populate dropdown
+    team_cursor = g.conn.execute("SELECT tid, name FROM teams ORDER BY tid")
+    teams = dict()
+    for result in team_cursor:
+        teams[result['tid']] = result['name']
+    team_cursor.close()
+
+    # Debug
+    print(teams)
+
+    return render_template('signup.html', team_list=teams)
 
 
 @app.route('/signup', methods=['POST'])

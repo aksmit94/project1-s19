@@ -29,8 +29,9 @@
                         <div class="control-group">
                             <p class="app-title">Choose favorite team:</p>
                             <select class="select" style="height:40px; width:250px;" name="favorite_team">
-                                <option value="1">Kolkata Knightriders</option>
-                                <option value="10">Pune Warriors</option>
+                                {% for tid, name in team_list.iteritems()%}
+                                    <option value="{{tid}}">{{name}}</option>
+                                {% endfor %}
                             </select>
                         </div>
                         <input type="submit" value="Create User" class="btn btn-large btn-block">
