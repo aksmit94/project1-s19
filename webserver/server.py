@@ -19,6 +19,7 @@ import os
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, render_template, g, redirect, Response, session, abort, flash
+from werkzeug.security import generate_password_hash, check_password_hash
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
@@ -214,6 +215,13 @@ def login():
         db_user['admin'] = result['admin_flag']
         cursor.close()
 
+        # After hashing implemented
+        # if check_password_hash(db_user['password'], session['password']):
+        #     session['logged_in'] = True
+        #     session['admin'] = db_user['admin']
+        # else:
+        #     flash('wrong password!')
+
         if session['password'] == db_user['password']:
             session['logged_in'] = True
             session['admin'] = db_user['admin']
@@ -241,7 +249,7 @@ def signup():
     team_cursor.close()
 
     # Debug
-    print(teams)
+    # print(teams)
 
     return render_template('signup.html', team_list=teams)
 
@@ -301,6 +309,9 @@ def signup_form():
         id_cursor.close()
         max_id = int(result['maxid'])
         curr_id = max_id + 1
+
+        # Hash password
+        # password = generate_password_hash(password)
 
         # Insert query
         cmd = """INSERT INTO Users(userid, name, password, admin_flag, tid) 
