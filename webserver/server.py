@@ -127,11 +127,60 @@ def index():
         #
         # example of a database query
         #
-        cursor = g.conn.execute("SELECT * FROM Players LIMIT 10")
-        names = []
-        for result in cursor:
-            names.append(result['name'])  # can also be accessed using result[0]
-        cursor.close()
+
+        # Ranking table
+        rank_cursor = g.conn.execute(""" SELECT  a.tid, a.name, b.rank 
+                                        FROM    Teams a, Ranking b 
+                                        WHERE   a.tid = b.tid
+                                        AND     b.tourid = 1 
+                                        ORDER BY b.rank """)
+        rankings = dict()
+        for result in rank_cursor:
+            rankings[result[2]] = [result[0], result[1]]
+        rank_cursor.close()
+
+        # Win-Draw-Loss Plot
+        cmd = """ WITH mymatches AS 
+                ( 
+                    SELECT    * 
+                    FROM      Matches
+                    WHERE     team1 = :fav_tid 
+                    OR        team2 = :fav_tid
+                )
+                SELECT  a.wins, b.losses, c.total - a.wins - b.losses AS draws
+                FROM    (
+                            SELECT  SUM(a.wins) AS wins
+                            FROM    (
+                                        SELECT  COUNT(*) AS wins
+                                        FROM    mymatches
+                                        WHERE   team1 = :fav_tid
+                                        AND     winner = 1
+                                        UNION ALL
+                                        SELECT  COUNT(*) AS wins
+                                        FROM    mymatches
+                                        WHERE   team2 = :fav_tid
+                                        AND     winner = 2
+                                    ) a
+                        ) a,
+                        (
+                            SELECT  SUM(a.losses) AS losses
+                            FROM    (
+                                        SELECT  COUNT(*) AS losses
+                                        FROM    mymatches
+                                        WHERE   team1 <> :fav_tid
+                                        AND     winner = 1
+                                        UNION ALL
+                                        SELECT  COUNT(*) AS losses
+                                        FROM    mymatches
+                                        WHERE   team2 <> :fav_tid
+                                        AND     winner = 2
+                                    ) a
+                        ) b,
+                        (
+                            SELECT  COUNT(*) AS total
+                            FROM    mymatches
+                        ) c """
+        wld = g.conn.execute(text(cmd), fav_tid=int(session['tid'])).fetchone()
 
         #
         # Flask uses Jinja templates, which is an extension to HTML where you can
@@ -159,17 +208,20 @@ def index():
         #     <div>{{n}}</div>
         #     {% endfor %}
         #
-        context = dict(data = names)
-
+        context = dict()
+        context['name'] = session['username']
+        context['tid'] = session['tid']
 
         #
         # render_template looks in the templates/ folder for files.
         # for example, the below file reads template/index.html
         #
+
+
         if session['admin']:
-            return render_template("index.html", **context)
+            return render_template("anotherfile.html", data=context, rankings=rankings)
         else:
-            return render_template("anotherfile.html")
+            return render_template("anotherfile.html", data=context, rankings=rankings)
 
         #
         # This is an example of a different path.  You can see it at
@@ -201,7 +253,7 @@ def login():
     session['password'] = request.form['password']
 
     # Check if username exists in Database (case sensitive)
-    cursor = g.conn.execute("SELECT name, password, admin_flag FROM Users WHERE name = %s", (session['username']))
+    cursor = g.conn.execute("SELECT name, password, admin_flag, tid FROM Users WHERE name = %s", (session['username']))
 
     if cursor.rowcount == 0:
         # Create username not found string
@@ -213,6 +265,7 @@ def login():
         result = cursor.fetchone()
         db_user['password'] = result['password']
         db_user['admin'] = result['admin_flag']
+        db_user['tid'] = result['tid']
         cursor.close()
 
         # After hashing implemented
@@ -225,6 +278,7 @@ def login():
         if session['password'] == db_user['password']:
             session['logged_in'] = True
             session['admin'] = db_user['admin']
+            session['tid'] = db_user['tid']
         else:
             flash('wrong password!')
     return index()
