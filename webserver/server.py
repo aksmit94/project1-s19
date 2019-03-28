@@ -139,6 +139,18 @@ def index():
             rankings[result[2]] = [result[0], result[1]]
         rank_cursor.close()
 
+        # Players info
+        player_cmd = """   SELECT   :pid, players.name, age, 
+                                    runs, wickets, b.tid, 
+                                    b.name as team_name, players.since, players.till, 
+                                    dense_rank() OVER (ORDER BY runs DESC) AS run_rank, 
+                                    dense_rank() OVER (ORDER BY wickets DESC) AS wicket_rank 
+                            FROM    players, teams as b 
+                            WHERE   players.tid = b.tid 
+                            """
+        player = g.conn.execute(text(player_cmd), pid=int(pid))
+
+
         # Win-Draw-Loss Plot
         cmd = """ WITH mymatches AS 
                 ( 
