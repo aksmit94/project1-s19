@@ -139,16 +139,19 @@ def index():
             rankings[result[2]] = [result[0], result[1]]
         rank_cursor.close()
 
-        # Players info
-        player_cmd = """   SELECT   pid, players.name, age, 
-                                    runs, wickets, b.tid, 
-                                    b.name as team_name, players.since, players.till, 
-                                    dense_rank() OVER (ORDER BY runs DESC) AS run_rank, 
-                                    dense_rank() OVER (ORDER BY wickets DESC) AS wicket_rank 
-                            FROM    players, teams as b 
-                            WHERE   players.tid = b.tid 
-                            AND     pid = :pid """
-        player = g.conn.execute(text(player_cmd), pid=int(pid))
+
+
+
+        # # Players info
+        # player_cmd = """   SELECT   pid, players.name, age,
+        #                             runs, wickets, b.tid,
+        #                             b.name as team_name, players.since, players.till,
+        #                             dense_rank() OVER (ORDER BY runs DESC) AS run_rank,
+        #                             dense_rank() OVER (ORDER BY wickets DESC) AS wicket_rank
+        #                     FROM    players, teams as b
+        #                     WHERE   players.tid = b.tid
+        #                     AND     pid = :pid """
+        # player = g.conn.execute(text(player_cmd), pid=int(pid))
 
 
         # Win-Draw-Loss Plot
@@ -303,6 +306,54 @@ def logout():
     session['logged_in'] = False
     return redirect('/')
 
+
+@app.route('/profile')
+def profile():
+    team_cursor = g.conn.execute("SELECT tid, name FROM teams ORDER BY tid")
+    teams = dict()
+    for result in team_cursor:
+        teams[result['tid']] = result['name']
+    team_cursor.close()
+
+    context = dict()
+    context['name'] = session['username']
+    context['tid'] = session['tid']
+
+
+    return render_template('profile.html', team_list=teams, user_info = context)
+
+
+@app.route('/profile', methods=['POST'])
+def profile_update():
+
+    print("Reached")
+
+    # helper functions
+
+    fav_team = int(request.form['favorite_team'])
+    admin_flag = str(0)
+
+    print('---------------------------------------'
+          '----------------------------------------'
+          '----------------------------------')
+    print('favorite tid: ', str(fav_team))
+    print('-------------------------------------------'
+          '--------------------------------------------'
+          '--------------------------')
+
+    username = session['username']
+
+    # Update Query
+
+    cmd = """UPDATE Users SET tid = :fav_team where name = :user"""
+
+
+    # Check if username exists
+
+    g.conn.execute(text(cmd), user=username, fav_team=fav_team)
+    session['tid'] = fav_team
+
+    return redirect("/")
 
 @app.route('/signup')
 def signup():
