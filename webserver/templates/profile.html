@@ -1,0 +1,41 @@
+<html>
+    <head>
+        <!-- Required meta tags -->
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+        <!-- Bootstrap CSS -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+    </head>
+    <nav class="navbar navbar-light" style="background-color: #e3f2fd;">
+        <a class="navbar-brand" href="#">
+            <img src="/static/logos/{{user_info['tid']}}.png" width="40" height="40" class="d-inline-block align-top" alt="">
+            &nbsp Welcome, {{user_info['name']}}!
+        </a>
+
+        <span class="nav-item">
+            <a class="nav-link" href="/">Back</a>
+        </span>
+
+        <span class="nav-item">
+            <a class="nav-link" href="/logout">Logout</a>
+        </span>
+    </nav>
+    <div class="team">
+        <form action="/profile" method="POST">
+            <div class="control-group">
+                <p class="app-title">Choose favorite team:</p>
+                <select class="select" style="height:40px; width:250px;" name="favorite_team">
+                    {% for tid, name in team_list.iteritems()%}
+                        <option value="{{tid}}">{{name}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <input type="submit" value="Submit" class="btn btn-large btn-block">
+        </form>
+    </div>
+</html>
+
+
