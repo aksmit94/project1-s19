@@ -21,6 +21,14 @@ from sqlalchemy.pool import NullPool
 from flask import Flask, request, render_template, g, redirect, Response, session, abort, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 
+# Bokeh Imports
+from bokeh.plotting import figure
+from bokeh.resources import CDN
+from bokeh.embed import components
+from bokeh.transform import dodge
+from bokeh.core.properties import value
+from bokeh.models import ColumnDataSource
+
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
 
@@ -105,6 +113,31 @@ def teardown_request(exception):
 # 
 # see for routing: http://flask.pocoo.org/docs/0.10/quickstart/#routing
 # see for decorators: http://simeonfranklin.com/blog/2012/jul/1/python-decorators-in-12-steps/
+#  #
+# Flask uses Jinja templates, which is an extension to HTML where you can
+# pass data to a template and dynamically generate HTML based on the data
+# (you can think of it as simple PHP)
+# documentation: https://realpython.com/blog/python/primer-on-jinja-templating/
+#
+# You can see an example template in templates/index.html
+#
+# context are the variables that are passed to the template.
+# for example, "data" key in the context variable defined below will be
+# accessible as a variable in index.html:
+#
+#     # will print: [u'grace hopper', u'alan turing', u'ada lovelace']
+#     <div>{{data}}</div>
+#
+#     # creates a <div> tag for each element in data
+#     # will print:
+#     #
+#     #   <div>grace hopper</div>
+#     #   <div>alan turing</div>
+#     #   <div>ada lovelace</div>
+#     #
+#     {% for n in data %}
+#     <div>{{n}}</div>
+#     {% endfor %}
 #
 @app.route('/')
 def index():
@@ -124,10 +157,6 @@ def index():
     if not session.get('logged_in'):
         return render_template('landing.html')
     else:
-        #
-        # example of a database query
-        #
-
         # Ranking table
         rank_cursor = g.conn.execute(""" SELECT  a.tid, a.name, b.rank 
                                         FROM    Teams a, Ranking b 
@@ -137,6 +166,10 @@ def index():
         rankings = dict()
         for result in rank_cursor:
             rankings[result[2]] = [result[0], result[1]]
+
+            # Store fav team name for future reference
+            if result[0] == session['tid']:
+                fav_team_name = result[1]
         rank_cursor.close()
 
 
@@ -154,6 +187,7 @@ def index():
         # player = g.conn.execute(text(player_cmd), pid=int(pid))
 
 
+        ########################################################
         # Win-Draw-Loss Plot
         cmd = """ WITH mymatches AS 
                 ( 
@@ -195,49 +229,87 @@ def index():
                             SELECT  COUNT(*) AS total
                             FROM    mymatches
                         ) c """
-        wld = g.conn.execute(text(cmd), fav_tid=int(session['tid'])).fetchone()
+        wld_cursor = g.conn.execute(text(cmd), fav_tid=int(session['tid']))
 
-        #
-        # Flask uses Jinja templates, which is an extension to HTML where you can
-        # pass data to a template and dynamically generate HTML based on the data
-        # (you can think of it as simple PHP)
-        # documentation: https://realpython.com/blog/python/primer-on-jinja-templating/
-        #
-        # You can see an example template in templates/index.html
-        #
-        # context are the variables that are passed to the template.
-        # for example, "data" key in the context variable defined below will be
-        # accessible as a variable in index.html:
-        #
-        #     # will print: [u'grace hopper', u'alan turing', u'ada lovelace']
-        #     <div>{{data}}</div>
-        #
-        #     # creates a <div> tag for each element in data
-        #     # will print:
-        #     #
-        #     #   <div>grace hopper</div>
-        #     #   <div>alan turing</div>
-        #     #   <div>ada lovelace</div>
-        #     #
-        #     {% for n in data %}
-        #     <div>{{n}}</div>
-        #     {% endfor %}
-        #
+        win_loss_draw = dict()
+        for result in wld_cursor:
+            win_loss_draw['wins'] = result[0]
+            win_loss_draw['losses'] = result[1]
+            win_loss_draw['draws'] = result[2]
+            win_loss_draw['total_games'] = sum(result)
+        wld_cursor.close()
+
+        # Bokeh Plot
+        wld_data = {'season': ['2008'],
+                    'wins': [win_loss_draw['wins']],
+                    'draws': [win_loss_draw['draws']],
+                    'losses': [win_loss_draw['losses']]}
+
+        source = ColumnDataSource(data=wld_data)
+
+        p = figure(x_range=['2008'], y_range=(0, int(win_loss_draw['total_games'])), plot_height=500,
+                   title="Performance of {} over seasons".format(fav_team_name))
+
+        p.vbar(x=dodge('season', -0.125, range=p.x_range), top='wins', width=0.2, source=source,
+               color="#c9d9d3", legend=value("wins"))
+
+        if win_loss_draw['draws'] != 0:
+            p.vbar(x=dodge('season', 0.0, range=p.x_range), top='draws', width=0.2, source=source,
+                   color="#718dbf", legend=value("draws"))
+
+        p.vbar(x=dodge('season', 0.125, range=p.x_range), top='losses', width=0.2, source=source,
+               color="#e84d60", legend=value("losses"))
+
+        p.xaxis[0].axis_label = 'Season'
+        p.yaxis[0].axis_label = 'No. of Games'
+
+        p.x_range.range_padding = 0.1
+        p.xgrid.grid_line_color = None
+        p.legend.location = "top_left"
+        p.legend.orientation = "horizontal"
+
+        wld_plot_script, wld_plot_div = components(p)
+        ########################################################
+
+        ########################################################
+        # Top performers
+
+        # # Batsmen
+        cmd = """   SELECT  pid, name, runs, SUM(runs) OVER (PARTITION BY tid) AS total_runs
+                    FROM    players 
+                    WHERE   tid = :tid
+                    ORDER BY runs DESC
+                    LIMIT 3 """
+        bat_cursor = g.conn.execute(text(cmd), tid=session['tid'])
+
+        top_batsmen = dict()
+        for result in bat_cursor:
+            top_batsmen[result[0]] = [result[1], result[2], result[2] * 100 / float(result[3])]
+        bat_cursor.close()
+
+        # # Bowlers
+        cmd = """   SELECT  pid, name, wickets, SUM(wickets) OVER (PARTITION BY tid) AS total_wickets
+                    FROM    players 
+                    WHERE   tid = :tid
+                    ORDER BY wickets DESC
+                    LIMIT 3 """
+        bowl_cursor = g.conn.execute(text(cmd), tid=session['tid'])
+
+        top_bowlers = dict()
+        for result in bowl_cursor:
+            top_bowlers[result[0]] = [result[1], result[2], result[2] * 100 / float(result[3])]
+        bowl_cursor.close()
+        ########################################################
         context = dict()
         context['name'] = session['username']
         context['tid'] = session['tid']
 
-        #
-        # render_template looks in the templates/ folder for files.
-        # for example, the below file reads template/index.html
-        #
-
-
         if session['admin']:
             return render_template("anotherfile.html", data=context, rankings=rankings)
         else:
-            return render_template("anotherfile.html", data=context, rankings=rankings)
-
+            return render_template("anotherfile.html", data=context, rankings=rankings,
+                                   plot_script=wld_plot_script, plot_div=wld_plot_div,
+                                   top_batsmen=top_batsmen, top_bowlers=top_bowlers)
         #
         # This is an example of a different path.  You can see it at
         #
@@ -319,8 +391,7 @@ def profile():
     context['name'] = session['username']
     context['tid'] = session['tid']
 
-
-    return render_template('profile.html', team_list=teams, user_info = context)
+    return render_template('profile.html', team_list=teams, user_info=context)
 
 
 @app.route('/profile', methods=['POST'])
@@ -329,7 +400,6 @@ def profile_update():
     print("Reached")
 
     # helper functions
-
     fav_team = int(request.form['favorite_team'])
     admin_flag = str(0)
 
@@ -344,16 +414,14 @@ def profile_update():
     username = session['username']
 
     # Update Query
-
     cmd = """UPDATE Users SET tid = :fav_team where name = :user"""
 
-
     # Check if username exists
-
     g.conn.execute(text(cmd), user=username, fav_team=fav_team)
     session['tid'] = fav_team
 
     return redirect("/")
+
 
 @app.route('/signup')
 def signup():

@@ -7,47 +7,124 @@
         <!-- Bootstrap CSS -->
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 
+        <!-- Bokeh -->
+        <link href="https://cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.css" rel="stylesheet" type="text/css">
+        <link href="https://cdn.pydata.org/bokeh/release/bokeh-widgets-0.12.14.min.css" rel="stylesheet" type="text/css">
+        <link href="https://cdn.pydata.org/bokeh/release/bokeh-tables-0.12.14.min.css" rel="stylesheet" type="text/css">
+
+        <script src="https://cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.js"></script>
+        <script src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.js"></script>
+        <script src="https://cdn.pydata.org/bokeh/release/bokeh-tables-1.0.4.min.js"></script>
+
     </head>
-    <nav class="navbar navbar-light" style="background-color: #e3f2fd;">
-        <a class="navbar-brand" href="#">
-            <img src="/static/logos/{{data['tid']}}.png" width="40" height="40" class="d-inline-block align-top" alt="">
-            &nbsp Welcome, {{data['name']}}!
-        </a>
+    <body>
+        <nav class="navbar navbar-light" style="background-color: #e3f2fd;">
+            <a class="navbar-brand" href="#">
+                <img src="/static/logos/{{data['tid']}}.png" width="40" height="40" class="d-inline-block align-top" alt="">
+                &nbsp Welcome, {{data['name']}}!
+            </a>
 
-        <span class="nav-item">
-            <a class="nav-link" href="/logout">Logout</a>
-        </span>
-    </nav>
-    <div class="row">
-        <div class="span8" style="padding-left:20px; background-color:azure">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th scope="col">Team</th>
-                        <th scope="col">Rank</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for rank, team in rankings.iteritems() %}
-                        {% if team[0] == data['tid'] %}
-                        <tr class="table-primary">
-                        {% else %}
+            <ul class="nav justify-content-end">
+                <li class="nav-item">
+                    <a class="nav-link" href="/profile">Change Favorite Team</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/logout">Logout</a>
+                </li>
+            </ul>
+
+        </nav>
+        <div class="row">
+            <div class="span8" style="padding-left:20px; background-color:azure">
+                <table class="table table-hover">
+                    <thead>
                         <tr>
-                        {% endif %}
-                            <td>
-                                <img src="/static/logos/{{team[0]}}.png" width="30" height="30" class="d-inline-block align-top" alt="">
-                                &nbsp {{ team[1] }}
-                            </td>
-                            <td>{{ rank }}</td>
+                            <th scope="col">Team</th>
+                            <th scope="col">Rank</th>
                         </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {% for rank, team in rankings.iteritems() %}
+                            {% if team[0] == data['tid'] %}
+                            <tr class="table-primary">
+                            {% else %}
+                            <tr>
+                            {% endif %}
+                                <td>
+                                    <img src="/static/logos/{{team[0]}}.png" width="30" height="30" class="d-inline-block align-top" alt="">
+                                    &nbsp {{ team[1] }}
+                                </td>
+                                <td>{{ rank }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <!-- Attempt at plotting -->
+            <div class="span4" style="margin-left:140px;">
+                {{ plot_div | safe }}
+            </div>
+            <div class="span8" style="margin-left:125px;">
+                <div class="row">
+                    <!-- Top Batsmen table-->
+                    <p class="" style="padding-top:5px; padding-bottom:10px;">Top 3 Performers with the Bat</p>
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th scope="col">Name</th>
+                                <th scope="col">Runs</th>
+                                <th scope="col">Percentage Runs</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pid, data in top_batsmen.iteritems() %}
+                                <tr>
+                                    <td>
+                                        {{ data[0] }}
+                                    </td>
+                                    <td>
+                                        {{ data[1] }}
+                                    </td>
+                                    <td>
+                                        {% print("{0:.2f}".format(data[2])) %}%
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="row" style="margin-top: 20px;">
+                    <!-- Top Bowlers table-->
+                    <p class="" style="padding-bottom:5px;">Top 3 Performers with the ball</p>
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th scope="col">Name</th>
+                                <th scope="col">Wickets</th>
+                                <th scope="col">Percentage Wickets</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pid, data in top_bowlers.iteritems() %}
+                                <tr>
+                                    <td>
+                                        {{ data[0] }}
+                                    </td>
+                                    <td>
+                                        {{ data[1] }}
+                                    </td>
+                                    <td>
+                                        {% print("{0:.2f}".format(data[2])) %}%
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-        <div class="span4">
-
-        </div>
-    </div>
+    </body>
+    {{ plot_script | safe }}
 </html>
 
 

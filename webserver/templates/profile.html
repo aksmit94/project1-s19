@@ -14,26 +14,27 @@
             &nbsp Welcome, {{user_info['name']}}!
         </a>
 
-        <span class="nav-item">
-            <a class="nav-link" href="/">Back</a>
-        </span>
-
-        <span class="nav-item">
-            <a class="nav-link" href="/logout">Logout</a>
-        </span>
+        <ul class="nav justify-content-end">
+            <li class="nav-item">
+                <a class="nav-link" href="/">Home</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/logout">Logout</a>
+            </li>
+        </ul>
     </nav>
     <div class="team">
         <form action="/profile" method="POST">
             <div class="control-group">
-                <p class="app-title">Choose favorite team:</p>
+                <p class="app-title" style="margin-top:20px; font-weight:bold;">Choose favorite team:</p>
                 <select class="select" style="height:40px; width:250px;" name="favorite_team">
                     {% for tid, name in team_list.iteritems()%}
                         <option value="{{tid}}">{{name}}</option>
                     {% endfor %}
                 </select>
+                <input type="submit" value="Save" class="btn btn-success">
             </div>
 
-            <input type="submit" value="Submit" class="btn btn-large btn-block">
         </form>
     </div>
 </html>
