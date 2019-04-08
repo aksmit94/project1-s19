@@ -198,21 +198,38 @@ def index():
                 ( 
                     SELECT    * 
                     FROM      Matches
-                    WHERE     team1 = :fav_tid 
-                    OR        team2 = :fav_tid
+                    WHERE     team1 = :tid
+                    OR        team2 = :tid
+                ),
+                home_matches AS
+                (
+                    SELECT  a.*
+                    FROM    mymatches a,
+                            Teams b
+                    WHERE   b.tid = :tid
+                    AND     a.venue = b.home
+                ),
+                away_matches AS
+                (
+                    SELECT  a.*
+                    FROM    mymatches a,
+                            Teams b
+                    WHERE   b.tid = :tid
+                    AND     a.venue != b.home
                 )
-                SELECT  a.wins, b.losses, c.total - a.wins - b.losses AS draws
+                
+                SELECT  'All' AS Venue, a.wins, b.losses, c.total - a.wins - b.losses AS draws
                 FROM    (
                             SELECT  SUM(a.wins) AS wins
                             FROM    (
                                         SELECT  COUNT(*) AS wins
                                         FROM    mymatches
-                                        WHERE   team1 = :fav_tid
+                                        WHERE   team1 = :tid
                                         AND     winner = 1
                                         UNION ALL
                                         SELECT  COUNT(*) AS wins
                                         FROM    mymatches
-                                        WHERE   team2 = :fav_tid
+                                        WHERE   team2 = :tid
                                         AND     winner = 2
                                     ) a
                         ) a,
@@ -221,51 +238,120 @@ def index():
                             FROM    (
                                         SELECT  COUNT(*) AS losses
                                         FROM    mymatches
-                                        WHERE   team1 <> :fav_tid
+                                        WHERE   team1 <> :tid
                                         AND     winner = 1
                                         UNION ALL
                                         SELECT  COUNT(*) AS losses
                                         FROM    mymatches
-                                        WHERE   team2 <> :fav_tid
+                                        WHERE   team2 <> :tid
                                         AND     winner = 2
                                     ) a
                         ) b,
                         (
                             SELECT  COUNT(*) AS total
                             FROM    mymatches
+                        ) c
+                UNION ALL
+                SELECT  'Home' AS Venue, a.wins, b.losses, c.total - a.wins - b.losses AS draws
+                FROM    (
+                            SELECT  SUM(a.wins) AS wins
+                            FROM    (
+                                        SELECT  COUNT(*) AS wins
+                                        FROM    home_matches
+                                        WHERE   team1 = :tid
+                                        AND     winner = 1
+                                        UNION ALL
+                                        SELECT  COUNT(*) AS wins
+                                        FROM    home_matches
+                                        WHERE   team2 = :tid
+                                        AND     winner = 2
+                                    ) a
+                        ) a,
+                        (
+                            SELECT  SUM(a.losses) AS losses
+                            FROM    (
+                                        SELECT  COUNT(*) AS losses
+                                        FROM    home_matches
+                                        WHERE   team1 <> :tid
+                                        AND     winner = 1
+                                        UNION ALL
+                                        SELECT  COUNT(*) AS losses
+                                        FROM    home_matches
+                                        WHERE   team2 <> :tid
+                                        AND     winner = 2
+                                    ) a
+                        ) b,
+                        (
+                            SELECT  COUNT(*) AS total
+                            FROM    home_matches
+                        ) c
+                UNION ALL
+                SELECT  'Away' AS Venue, a.wins, b.losses, c.total - a.wins - b.losses AS draws
+                FROM    (
+                            SELECT  SUM(a.wins) AS wins
+                            FROM    (
+                                        SELECT  COUNT(*) AS wins
+                                        FROM    away_matches
+                                        WHERE   team1 = :tid
+                                        AND     winner = 1
+                                        UNION ALL
+                                        SELECT  COUNT(*) AS wins
+                                        FROM    away_matches
+                                        WHERE   team2 = :tid
+                                        AND     winner = 2
+                                    ) a
+                        ) a,
+                        (
+                            SELECT  SUM(a.losses) AS losses
+                            FROM    (
+                                        SELECT  COUNT(*) AS losses
+                                        FROM    away_matches
+                                        WHERE   team1 <> :tid
+                                        AND     winner = 1
+                                        UNION ALL
+                                        SELECT  COUNT(*) AS losses
+                                        FROM    away_matches
+                                        WHERE   team2 <> :tid
+                                        AND     winner = 2
+                                    ) a
+                        ) b,
+                        (
+                            SELECT  COUNT(*) AS total
+                            FROM    away_matches
                         ) c """
-        wld_cursor = g.conn.execute(text(cmd), fav_tid=int(session['tid']))
+        wld_cursor = g.conn.execute(text(cmd), tid=int(session['tid']))
 
         win_loss_draw = dict()
         for result in wld_cursor:
-            win_loss_draw['wins'] = result[0]
-            win_loss_draw['losses'] = result[1]
-            win_loss_draw['draws'] = result[2]
-            win_loss_draw['total_games'] = sum(result)
+            win_loss_draw[result[0]] = [result[1], result[2], result[3]]
         wld_cursor.close()
 
         # Bokeh Plot
-        wld_data = {'season': ['2008'],
-                    'wins': [win_loss_draw['wins']],
-                    'draws': [win_loss_draw['draws']],
-                    'losses': [win_loss_draw['losses']]}
+
+        venues = ['Home', 'Away', 'All']
+
+        wld_data = {'venue': list(win_loss_draw.keys()),
+                    'wins': [win_loss_draw[i][0] for i in list(win_loss_draw.keys())],
+                    'losses': [win_loss_draw[i][1] for i in list(win_loss_draw.keys())],
+                    'draws': [win_loss_draw[i][2] for i in list(win_loss_draw.keys())]
+                    }
 
         source = ColumnDataSource(data=wld_data)
 
-        p = figure(x_range=['2008'], y_range=(0, int(win_loss_draw['total_games'])), plot_height=500,
-                   title="Performance of {} over seasons".format(fav_team_name))
+        p = figure(x_range=venues, y_range=(0, 20), plot_height=500,
+                   title="Performance of {} over venues".format(fav_team_name))
 
-        p.vbar(x=dodge('season', -0.125, range=p.x_range), top='wins', width=0.2, source=source,
+        p.vbar(x=dodge('venue', -0.125, range=p.x_range), top='wins', width=0.2, source=source,
                color="#c9d9d3", legend=value("Wins"))
 
-        if win_loss_draw['draws'] != 0:
-            p.vbar(x=dodge('season', 0.0, range=p.x_range), top='draws', width=0.2, source=source,
-                   color="#718dbf", legend=value("Draws"))
+        # if sum(wld_data['draws']) != 0:
+        #     p.vbar(x=dodge('venue', 0.0, range=p.x_range), top='draws', width=0.2, source=source,
+        #            color="#718dbf", legend=value("Draws"))
 
-        p.vbar(x=dodge('season', 0.125, range=p.x_range), top='losses', width=0.2, source=source,
+        p.vbar(x=dodge('venue', 0.125, range=p.x_range), top='losses', width=0.2, source=source,
                color="#e84d60", legend=value("Losses"))
 
-        p.xaxis[0].axis_label = 'Season'
+        p.xaxis[0].axis_label = 'Venue'
         p.yaxis[0].axis_label = 'No. of Games'
 
         p.x_range.range_padding = 0.1
