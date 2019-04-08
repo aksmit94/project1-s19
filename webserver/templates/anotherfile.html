@@ -1,5 +1,6 @@
 <html>
     <head>
+
         <!-- Required meta tags -->
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -10,14 +11,14 @@
         <!-- Bokeh -->
         <link href="https://cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.css" rel="stylesheet" type="text/css">
         <link href="https://cdn.pydata.org/bokeh/release/bokeh-widgets-0.12.14.min.css" rel="stylesheet" type="text/css">
-        <link href="https://cdn.pydata.org/bokeh/release/bokeh-tables-0.12.14.min.css" rel="stylesheet" type="text/css">
 
         <script src="https://cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.js"></script>
         <script src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.js"></script>
-        <script src="https://cdn.pydata.org/bokeh/release/bokeh-tables-1.0.4.min.js"></script>
 
     </head>
+
     <body>
+
         <nav class="navbar navbar-light" style="background-color: #e3f2fd;">
             <a class="navbar-brand" href="#">
                 <img src="/static/logos/{{data['tid']}}.png" width="40" height="40" class="d-inline-block align-top" alt="">
@@ -34,6 +35,7 @@
             </ul>
 
         </nav>
+
         <div class="row">
             <div class="span8" style="padding-left:20px; background-color:azure">
                 <table class="table table-hover">
@@ -60,18 +62,21 @@
                     </tbody>
                 </table>
             </div>
-            <!-- Attempt at plotting -->
-            <div class="span4" style="margin-left:140px;">
-                {{ plot_div | safe }}
+
+            <!-- Division for WLD plot -->
+            <div class="span4" style="margin-left:100px;">
+                {{ wld_plot_div | safe }}
             </div>
-            <div class="span8" style="margin-left:125px;">
-                <div class="row">
+
+            <div class="span8" style="margin-left:115px;">
+                <div class="row" style="background-color:oldlace; padding:10px;">
                     <!-- Top Batsmen table-->
-                    <p class="" style="padding-top:5px; padding-bottom:10px;">Top 3 Performers with the Bat</p>
+                    <p class="" style="padding-top:5px;">Top 3 Performers with the bat</p>
                     <table class="table table-hover">
                         <thead>
                             <tr>
                                 <th scope="col">Name</th>
+                                <th scope="col">Country</th>
                                 <th scope="col">Runs</th>
                                 <th scope="col">Percentage Runs</th>
                             </tr>
@@ -83,6 +88,9 @@
                                         {{ data[0] }}
                                     </td>
                                     <td>
+                                        {{ data[3] }}
+                                    </td>
+                                    <td>
                                         {{ data[1] }}
                                     </td>
                                     <td>
@@ -93,13 +101,15 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="row" style="margin-top: 20px;">
+
+                <div class="row" style="margin-top: 10px; background-color:oldlace; padding:10px">
                     <!-- Top Bowlers table-->
-                    <p class="" style="padding-bottom:5px;">Top 3 Performers with the ball</p>
+                    <p class="" style="padding-top:5px;">Top 3 Performers with the ball</p>
                     <table class="table table-hover">
                         <thead>
                             <tr>
                                 <th scope="col">Name</th>
+                                <th scope="col">Country</th>
                                 <th scope="col">Wickets</th>
                                 <th scope="col">Percentage Wickets</th>
                             </tr>
@@ -109,6 +119,9 @@
                                 <tr>
                                     <td>
                                         {{ data[0] }}
+                                    </td>
+                                    <td>
+                                        {{ data[3] }}
                                     </td>
                                     <td>
                                         {{ data[1] }}
@@ -122,9 +135,21 @@
                     </table>
                 </div>
             </div>
+
         </div>
+
+        <hr>
+
+        <div class="row">
+            <!-- Division for Team Comp plot -->
+            <div class="span6" style="padding-left:20px;">
+                {{ team_comp_plot_div | safe }}
+            </div>
+        </div>
+
     </body>
-    {{ plot_script | safe }}
+    {{ wld_plot_script | safe }}
+    {{ team_comp_plot_script | safe }}
 </html>
 
 

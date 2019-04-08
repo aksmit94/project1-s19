@@ -16,6 +16,7 @@ Read about it online.
 """
 
 import os
+from math import pi
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, render_template, g, redirect, Response, session, abort, flash
@@ -23,11 +24,14 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 # Bokeh Imports
 from bokeh.plotting import figure
-from bokeh.resources import CDN
 from bokeh.embed import components
-from bokeh.transform import dodge
+from bokeh.transform import dodge, cumsum
 from bokeh.core.properties import value
 from bokeh.models import ColumnDataSource
+from bokeh.palettes import Category20c
+
+# Pandas
+import pandas as pd
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
@@ -157,6 +161,8 @@ def index():
     if not session.get('logged_in'):
         return render_template('landing.html')
     else:
+
+        ########################################################
         # Ranking table
         rank_cursor = g.conn.execute(""" SELECT  a.tid, a.name, b.rank 
                                         FROM    Teams a, Ranking b 
@@ -171,10 +177,9 @@ def index():
             if result[0] == session['tid']:
                 fav_team_name = result[1]
         rank_cursor.close()
+        ########################################################
 
-
-
-
+        ########################################################
         # # Players info
         # player_cmd = """   SELECT   pid, players.name, age,
         #                             runs, wickets, b.tid,
@@ -185,7 +190,7 @@ def index():
         #                     WHERE   players.tid = b.tid
         #                     AND     pid = :pid """
         # player = g.conn.execute(text(player_cmd), pid=int(pid))
-
+        ########################################################
 
         ########################################################
         # Win-Draw-Loss Plot
@@ -251,14 +256,14 @@ def index():
                    title="Performance of {} over seasons".format(fav_team_name))
 
         p.vbar(x=dodge('season', -0.125, range=p.x_range), top='wins', width=0.2, source=source,
-               color="#c9d9d3", legend=value("wins"))
+               color="#c9d9d3", legend=value("Wins"))
 
         if win_loss_draw['draws'] != 0:
             p.vbar(x=dodge('season', 0.0, range=p.x_range), top='draws', width=0.2, source=source,
-                   color="#718dbf", legend=value("draws"))
+                   color="#718dbf", legend=value("Draws"))
 
         p.vbar(x=dodge('season', 0.125, range=p.x_range), top='losses', width=0.2, source=source,
-               color="#e84d60", legend=value("losses"))
+               color="#e84d60", legend=value("Losses"))
 
         p.xaxis[0].axis_label = 'Season'
         p.yaxis[0].axis_label = 'No. of Games'
@@ -275,7 +280,7 @@ def index():
         # Top performers
 
         # # Batsmen
-        cmd = """   SELECT  pid, name, runs, SUM(runs) OVER (PARTITION BY tid) AS total_runs
+        cmd = """   SELECT  pid, name, runs, SUM(runs) OVER (PARTITION BY tid) AS total_runs, country
                     FROM    players 
                     WHERE   tid = :tid
                     ORDER BY runs DESC
@@ -284,11 +289,11 @@ def index():
 
         top_batsmen = dict()
         for result in bat_cursor:
-            top_batsmen[result[0]] = [result[1], result[2], result[2] * 100 / float(result[3])]
+            top_batsmen[result[0]] = [result[1], result[2], result[2] * 100 / float(result[3]), result[4]]
         bat_cursor.close()
 
         # # Bowlers
-        cmd = """   SELECT  pid, name, wickets, SUM(wickets) OVER (PARTITION BY tid) AS total_wickets
+        cmd = """   SELECT  pid, name, wickets, SUM(wickets) OVER (PARTITION BY tid) AS total_wickets, country
                     FROM    players 
                     WHERE   tid = :tid
                     ORDER BY wickets DESC
@@ -297,9 +302,43 @@ def index():
 
         top_bowlers = dict()
         for result in bowl_cursor:
-            top_bowlers[result[0]] = [result[1], result[2], result[2] * 100 / float(result[3])]
+            top_bowlers[result[0]] = [result[1], result[2], result[2] * 100 / float(result[3]), result[4]]
         bowl_cursor.close()
         ########################################################
+
+        ########################################################
+        # Team Composition Pie
+        cmd = """   SELECT  country, count(*)
+                    FROM    players
+                    WHERE   tid = :tid
+                    GROUP BY country
+                    ORDER BY count(*) DESC  """
+        team_comp_cursor = g.conn.execute(text(cmd), tid=int(session['tid']))
+
+        team_comp = dict()
+        for result in team_comp_cursor:
+            team_comp[result[0]] = result[1]
+        team_comp_cursor.close()
+
+        # Bokeh Plot
+        data = pd.Series(team_comp).reset_index(name='value').rename(columns={'index': 'country'})
+        data['angle'] = data['value'] / data['value'].sum() * 2 * pi
+        data['color'] = Category20c[len(team_comp)]
+
+        p = figure(plot_height=350, title="Country Diversity", toolbar_location=None,
+                   tools="hover", tooltips="@country: @value", x_range=(-0.5, 1.0))
+
+        p.wedge(x=0, y=1, radius=0.4,
+                start_angle=cumsum('angle', include_zero=True), end_angle=cumsum('angle'),
+                line_color="white", fill_color='color', legend='country', source=data)
+
+        p.axis.axis_label = None
+        p.axis.visible = False
+        p.grid.grid_line_color = None
+
+        team_comp_plot_script, team_comp_plot_div = components(p)
+        ########################################################
+
         context = dict()
         context['name'] = session['username']
         context['tid'] = session['tid']
@@ -308,29 +347,9 @@ def index():
             return render_template("anotherfile.html", data=context, rankings=rankings)
         else:
             return render_template("anotherfile.html", data=context, rankings=rankings,
-                                   plot_script=wld_plot_script, plot_div=wld_plot_div,
-                                   top_batsmen=top_batsmen, top_bowlers=top_bowlers)
-        #
-        # This is an example of a different path.  You can see it at
-        #
-        #     localhost:8111/another
-        #
-        # notice that the functio name is another() rather than index()
-        # the functions for each app.route needs to have different names
-        #
-        # @app.route('/another')
-        # def another():
-        #   return render_template("anotherfile.html")
-
-
-# Example of adding new data to the database
-# @app.route('/add', methods=['POST'])
-# def add():
-#     name = request.form['name']
-#     print name
-#     cmd = 'INSERT INTO test(name) VALUES (:name1), (:name2)';
-#     g.conn.execute(text(cmd), name1 = name, name2 = name);
-#     return redirect('/')
+                                   wld_plot_script=wld_plot_script, wld_plot_div=wld_plot_div,
+                                   top_batsmen=top_batsmen, top_bowlers=top_bowlers,
+                                   team_comp_plot_script=team_comp_plot_script, team_comp_plot_div=team_comp_plot_div)
 
 
 @app.route('/login', methods=['POST'])
