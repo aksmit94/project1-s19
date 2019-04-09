@@ -64,7 +64,7 @@
             </div>
 
             <!-- Division for WLD plot -->
-            <div class="span4" style="margin-left:100px;">
+            <div class="span4" style="margin-left:75px;">
                 {{ wld_plot_div | safe }}
             </div>
 
@@ -145,11 +145,62 @@
             <div class="span6" style="padding-left:20px;">
                 {{ team_comp_plot_div | safe }}
             </div>
+
+            <!-- Division for last matches table-->
+            <div class="span6" style="margin-left:100px;">
+                <p class="" style="padding-top:5px;">Last 5 matches</p>
+                <div style="height:20px; width:200px; display: inline-flex">
+                    <div style="height:10px; width:10px; margin:5px; background-color: #B1DFBB;"></div>
+                    <p>Won</p>
+                    &nbsp
+                    &nbsp
+                    &nbsp
+                    &nbsp
+                    <div style="height:10px; width:10px; margin:5px; background-color: #F5C6CB;"></div>
+                    <p>Lost</p>
+                <!-- Replace "#FF850A" to change the color -->
+                </div>
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th scope="col">Opposition</th>
+                            <th scope="col">Venue</th>
+                            <th scope="col">Stage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mid, data in last_matches.iteritems() %}
+                            {% if data[1] == "won" %}
+                                <tr class="table-success">
+                            {% else %}
+                                <tr class="table-danger">
+                            {% endif %}
+                                <td>
+                                    {{ data[0] }}
+                                </td>
+                                <td>
+                                    {{ data[2] }}
+                                </td>
+                                <td>
+                                    {{ data[3] }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Division for WLD plot -->
+            <div class="span4" style="margin-left:100px;">
+                {{ matches_plot_div | safe }}
+            </div>
+
         </div>
 
     </body>
     {{ wld_plot_script | safe }}
     {{ team_comp_plot_script | safe }}
+    {{ matches_plot_script | safe }}
 </html>
 
 

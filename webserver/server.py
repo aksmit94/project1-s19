@@ -16,6 +16,7 @@ Read about it online.
 """
 
 import os
+import collections
 from math import pi
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
@@ -425,6 +426,124 @@ def index():
         team_comp_plot_script, team_comp_plot_div = components(p)
         ########################################################
 
+        ########################################################
+        # Last 5 matches
+        cmd = """
+                WITH mymatches AS
+                (
+                    SELECT  *
+                    FROM    matches
+                    WHERE   team1 = :tid
+                    OR      team2 = :tid
+                )
+                SELECT  a.mid,
+                        b.name AS Opp,
+                        a.win_lose,
+                        a.venue,
+                        a.type
+                FROM    (
+                            SELECT  mid,
+                                    team2 AS Opposition,
+                                    CASE
+                                        WHEN winner = 1 THEN 'won'
+                                        ELSE 'lost' 
+                                    END AS win_lose,
+                                    venue,
+                                    type
+                            FROM    mymatches
+                            WHERE   team1 = :tid
+                            UNION ALL
+                            SELECT  mid,
+                                    team1 AS Opposition,
+                                    CASE
+                                        WHEN winner = 2 THEN 'won'
+                                        ELSE 'lost' 
+                                    END AS win_lose,
+                                    venue,
+                                    type
+                            FROM    mymatches
+                            WHERE   team2 = :tid
+                        ) AS a,
+                        Teams AS b
+                WHERE   a.Opposition = b.tid
+                ORDER BY mid DESC
+                LIMIT 5 """
+
+        last_matches_cursor = g.conn.execute(text(cmd), tid=session['tid'])
+
+        last_matches = dict()
+        for result in last_matches_cursor:
+            last_matches[result[0]] = [result[1], result[2], result[3], result[4]]
+        last_matches_cursor.close()
+
+        last_matches = collections.OrderedDict(sorted(last_matches.items()))
+        ########################################################
+
+        ########################################################
+        # Match-by-match plot
+        cmd = """
+                WITH mymatches AS
+                (
+                    SELECT  *
+                    FROM    matches
+                    WHERE   team1 = 2
+                    OR      team2 = :tid
+                ),
+                wins_losses AS
+                (
+                    SELECT	mid,
+                            team2 AS Opposition,
+                            CASE
+                                WHEN winner = 1 THEN 1
+                                ELSE 0
+                            END AS win_lose,
+                            venue,
+                            type
+                    FROM    mymatches
+                    WHERE   team1 = :tid
+                    UNION ALL
+                    SELECT  mid,
+                            team1 AS Opposition,
+                            CASE
+                                WHEN winner = 2 THEN 1
+                                ELSE 0
+                            END AS win_lose,
+                            venue,
+                            type
+                    FROM    mymatches
+                    WHERE   team2 = :tid
+                )
+                SELECT	mid,
+                        SUM(win_lose) OVER (ORDER BY mid)
+                FROM	wins_losses
+                ORDER BY mid """
+
+        matches_cursor = g.conn.execute(text(cmd), tid=session['tid'])
+
+        matches = dict()
+        j = 0
+        for result in matches_cursor:
+            j += 1
+            matches[j] = result[1]
+        matches_cursor.close()
+
+        matches = collections.OrderedDict(sorted(matches.items()))
+
+        print(matches)
+
+        plot = figure(plot_height=500,title="Performance of {} per match".format(fav_team_name))
+
+        x = list(matches.keys())
+        y = [matches[i] for i in list(matches.keys())]
+
+        plot.line(x, y, line_width=4)
+
+        plot.xaxis[0].axis_label = 'Match Number'
+        plot.yaxis[0].axis_label = 'Wins'
+
+        matches_plot_script, matches_plot_div = components(plot)
+        ########################################################
+
         context = dict()
         context['name'] = session['username']
         context['tid'] = session['tid']
@@ -432,10 +551,11 @@ def index():
         if session['admin']:
             return render_template("anotherfile.html", data=context, rankings=rankings)
         else:
-            return render_template("anotherfile.html", data=context, rankings=rankings,
+            return render_template("anotherfile.html", data=context, rankings=rankings, last_matches=last_matches,
                                    wld_plot_script=wld_plot_script, wld_plot_div=wld_plot_div,
                                    top_batsmen=top_batsmen, top_bowlers=top_bowlers,
-                                   team_comp_plot_script=team_comp_plot_script, team_comp_plot_div=team_comp_plot_div)
+                                   team_comp_plot_script=team_comp_plot_script, team_comp_plot_div=team_comp_plot_div,
+                                   matches_plot_script=matches_plot_script, matches_plot_div=matches_plot_div)
 
 
 @app.route('/login', methods=['POST'])
