@@ -158,9 +158,14 @@ def index():
     # DEBUG: this is debugging code to see what request looks like
     # print request.args
 
+
+
+
     if not session.get('logged_in'):
         return render_template('landing.html')
     else:
+        # cmd = "DELETE FROM Tournament where year > 2018"
+        # g.conn.execute(text(cmd))
 
         ########################################################
         # Ranking table
@@ -439,8 +444,14 @@ def index():
         context['name'] = session['username']
         context['tid'] = session['tid']
 
+        tournament_cursor = g.conn.execute("select * from tournament")
+        tournament_dict = {}
+        for tourn in tournament_cursor:
+            tournament_dict[tourn[0]] = [tourn[1], tourn[2], tourn[3]]
+        tournament_cursor.close()
+
         if session['admin']:
-            return render_template("adminfile.html", data=context, users=user_dict)
+            return render_template("adminfile.html", data=context, users=user_dict, tournament=tournament_dict)
         else:
             return render_template("anotherfile.html", data=context, rankings=rankings,
                                    wld_plot_script=wld_plot_script, wld_plot_div=wld_plot_div,
@@ -571,6 +582,50 @@ def user_update():
     return redirect("/")
 
 
+@app.route("/tournament_update", methods=['POST'])
+def tournament_update():
+    # print "Reached"
+    sponser_name = request.form.get("Sponser")
+    print('---------------------------------------'
+          '----------------------------------------'
+          '----------------------------------')
+    print('Sponser ', str(sponser_name))
+    print('-------------------------------------------'
+          '--------------------------------------------'
+          '--------------------------')
+
+    if len(sponser_name)== 0:
+        flash("Enter a valid tournament name, greater than 0 characters")
+    else:
+
+        cmd = """SELECT * FROM tournament ORDER BY TourID DESC LIMIT 1"""
+        tournament_cursor = g.conn.execute(text(cmd))
+        for row in tournament_cursor:
+            curr_id = row[0] + 1
+            tournament_year = row[2] + 1
+            sponser = sponser_name
+            tournament_name = sponser + ' IPL'
+            print('---------------------------------------'
+                  '----------------------------------------'
+                  '----------------------------------')
+            print("Information is ", curr_id, tournament_year, sponser, tournament_name)
+            print('---------------------------------------'
+                  '----------------------------------------'
+                  '----------------------------------')
+            cmd = """INSERT INTO Tournament(TourID, Name, Year, SponsorName)
+                            VALUES (:tourid, :tourname, :touryear, :sponsor)"""
+            g.conn.execute(text(cmd), tourid=curr_id, tourname=tournament_name,
+                           touryear=tournament_year, sponsor=sponser)
+            flash("Tournament Created")
+
+
+
+
+
+
+
+    return redirect("/")
+
 
 @app.route('/signup', methods=['POST'])
 def signup_form():
@@ -618,7 +673,8 @@ def signup_form():
         return redirect('/signup')
 
     # Check if username exists
-    user_cursor = g.conn.execute("SELECT name FROM Users WHERE name = %s", username)
+    cmd = "SELECT name FROM Users WHERE name = :username"
+    user_cursor = g.conn.execute(text(cmd), username=username)
     if not user_cursor.rowcount:
         # Get max existing id
         #   # Note: Change schema of tables to make IDs serialized

@@ -66,16 +66,61 @@
                 </table>
             </div>
 
+            <div class="tournament" style="margin-left:100px;">
+                <form action="/tournament_update" method="POST">
+                    <fieldset>
+                        <legend>New Tournament Information</legend>
+                        <p>
+                          <label>Enter the new Sponser Name</label>
+                          <input type = "text" name = "Sponser" />
+                        </p>
+                    </fieldset>
+                    <input type="submit" value="Submit" class="btn btn-success">
+                </form>
+
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        {% for message in messages %}
+                            {{ message }}
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+            <table class="table table-hover ">
+                    <thead>
+                        <tr>
+                            <th scope="col">Year</th>
+                            <th scope="col">Sponser Name</th>
+                            <th scope="col">Tournament Name</th>
+                        </tr>
+                    </thead>
+                    <tbody align="center">
+                        {% for key in tournament %}
+                            <tr>
+
+                                <td>&nbsp  {{ tournament[key][1] }}</td>
+                                <td> {{ tournament[key][0] }}</td>
+                                <td> {{ tournament[key][2] }}</td>
+
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+            </table>
+
+
+
+            </div>
+
+            <div>
+
+
+            </div>
+
+
+
         </div>
 
         <hr>
-
-        <div class="row">
-            <!-- Division for Team Comp plot -->
-            <div class="span6" style="padding-left:20px;">
-                {{ team_comp_plot_div | safe }}
-            </div>
-        </div>
 
     </body>
 </html>
