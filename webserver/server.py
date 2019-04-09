@@ -177,6 +177,16 @@ def index():
             if result[0] == session['tid']:
                 fav_team_name = result[1]
         rank_cursor.close()
+
+        user_cursor = g.conn.execute(""" SELECT  userid, name 
+                                                FROM    users
+                                                WHERE   admin_flag = 'f'
+                                                """)
+        user_dict = dict()
+        for result in user_cursor:
+            user_dict[result[0]] = result[1]
+
+        user_cursor.close()
         ########################################################
 
         ########################################################
@@ -430,7 +440,7 @@ def index():
         context['tid'] = session['tid']
 
         if session['admin']:
-            return render_template("anotherfile.html", data=context, rankings=rankings)
+            return render_template("adminfile.html", data=context, users=user_dict)
         else:
             return render_template("anotherfile.html", data=context, rankings=rankings,
                                    wld_plot_script=wld_plot_script, wld_plot_div=wld_plot_div,
@@ -502,7 +512,7 @@ def profile():
 @app.route('/profile', methods=['POST'])
 def profile_update():
 
-    print("Reached")
+    # print("Reached")
 
     # helper functions
     fav_team = int(request.form['favorite_team'])
@@ -542,6 +552,24 @@ def signup():
     # print(teams)
 
     return render_template('signup.html', team_list=teams)
+
+
+@app.route("/user_update", methods=['POST'])
+def user_update():
+    # print "Reached"
+    user = request.form.get("userId")
+    print('---------------------------------------'
+          '----------------------------------------'
+          '----------------------------------')
+    print('Deleteting userid ', str(user))
+    print('-------------------------------------------'
+          '--------------------------------------------'
+          '--------------------------')
+
+    cmd = """DELETE FROM Users where userid = :user_id"""
+    g.conn.execute(text(cmd), user_id=user)
+    return redirect("/")
+
 
 
 @app.route('/signup', methods=['POST'])

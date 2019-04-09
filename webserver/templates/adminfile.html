@@ -1,0 +1,83 @@
+<html>
+    <head>
+
+        <!-- Required meta tags -->
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+        <!-- Bootstrap CSS -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+        <!-- Bokeh -->
+        <link href="https://cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.css" rel="stylesheet" type="text/css">
+        <link href="https://cdn.pydata.org/bokeh/release/bokeh-widgets-0.12.14.min.css" rel="stylesheet" type="text/css">
+
+        <script src="https://cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.js"></script>
+        <script src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.js"></script>
+
+    </head>
+
+    <body>
+
+        <nav class="navbar navbar-light" style="background-color: #e3f2fd;">
+            <a class="navbar-brand" href="#">
+                <img src="/static/logos/{{data['tid']}}.png" width="40" height="40" class="d-inline-block align-top" alt="">
+                &nbsp Welcome, {{data['name']}}!
+            </a>
+
+            <ul class="nav justify-content-end">
+                <li class="nav-item">
+                    <a class="nav-link" href="/profile">Update Favourate Team</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/logout">Logout</a>
+                </li>
+            </ul>
+
+        </nav>
+
+        <div class="row">
+            <div class="span8" style="padding-left:20px; background-color:azure">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th scope="col">UserID</th>
+                            <th scope="col">Name</th>
+                            <th scope="col">Option</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for key in users %}
+                            <tr>
+                                <td>
+                                    &nbsp {{ key }}
+                                </td>
+                                <td>{{ users[key] }}</td>
+                                <td>
+                                    <form action="/user_update" method="POST">
+                                        <button value={{key}} onclick="location.href='/user_update'">Delete</button>
+                                        <input id="userId" name="userId" type="hidden" value="{{key}}">
+                                    </form>
+                                </td>
+
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+
+        <hr>
+
+        <div class="row">
+            <!-- Division for Team Comp plot -->
+            <div class="span6" style="padding-left:20px;">
+                {{ team_comp_plot_div | safe }}
+            </div>
+        </div>
+
+    </body>
+</html>
+
+
