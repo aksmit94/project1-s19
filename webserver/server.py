@@ -389,7 +389,7 @@ def index():
                     LIMIT 3 """
         bat_cursor = g.conn.execute(text(cmd), tid=session['tid'])
 
-        top_batsmen = dict()
+        top_batsmen = collections.OrderedDict()
         for result in bat_cursor:
             top_batsmen[result[0]] = [result[1], result[2], result[2] * 100 / float(result[3]), result[4]]
         bat_cursor.close()
@@ -402,7 +402,7 @@ def index():
                     LIMIT 3 """
         bowl_cursor = g.conn.execute(text(cmd), tid=session['tid'])
 
-        top_bowlers = dict()
+        top_bowlers = collections.OrderedDict()
         for result in bowl_cursor:
             top_bowlers[result[0]] = [result[1], result[2], result[2] * 100 / float(result[3]), result[4]]
         bowl_cursor.close()
@@ -737,12 +737,6 @@ def tournament_update():
             g.conn.execute(text(cmd), tourid=curr_id, tourname=tournament_name,
                            touryear=tournament_year, sponsor=sponser)
             flash("Tournament Created")
-
-
-
-
-
-
 
     return redirect("/")
 
