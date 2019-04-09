@@ -1,10 +1,10 @@
-1. Filter on which season to show the rankings of that particular season
-2. Condition  on  favourite team not present in season
+1. Filter on which season to show the rankings of that particular season - Not implementing
+2. Condition  on  favourite team not present in season - Give a message for this
 3. Update the favourite team -- Done
-4. Cover all tables in the application
+4. Cover all tables in the application - Need to cover awards and players 
 
 Ask TA on how to keep the url working
 
 Plots
 
-1. How to include plots(use matplotlib) in the UI
+1. How to include plots(use matplotlib) in the UI - Done
