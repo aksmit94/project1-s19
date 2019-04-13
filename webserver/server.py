@@ -486,12 +486,13 @@ def index():
 
         last_matches_cursor = g.conn.execute(text(cmd), tid=session['tid'])
 
-        last_matches = dict()
+        last_matches = collections.OrderedDict()
         for result in last_matches_cursor:
+            print(result)
             last_matches[result[0]] = [result[1], result[2], result[3], result[4]]
         last_matches_cursor.close()
 
-        last_matches = collections.OrderedDict(sorted(last_matches.items()))
+        # last_matches = collections.OrderedDict(sorted(last_matches.items()))
         ########################################################
 
         ########################################################
@@ -501,7 +502,7 @@ def index():
                 (
                     SELECT  *
                     FROM    matches
-                    WHERE   team1 = 2
+                    WHERE   team1 = :tid
                     OR      team2 = :tid
                 ),
                 wins_losses AS
@@ -535,14 +536,15 @@ def index():
 
         matches_cursor = g.conn.execute(text(cmd), tid=session['tid'])
 
-        matches = dict()
+        matches = collections.OrderedDict()
         j = 0
         for result in matches_cursor:
+            # print(result)
             j += 1
             matches[j] = result[1]
         matches_cursor.close()
 
-        matches = collections.OrderedDict(sorted(matches.items()))
+        # matches = collections.OrderedDict(sorted(matches.items()))
 
         print(matches)
 
