@@ -809,41 +809,66 @@ def user_update():
     return redirect("/")
 
 
-@app.route("/tournament_update", methods=['POST'])
-def tournament_update():
+@app.route("/tournament_delete", methods=['POST'])
+def tournament_delete():
     # print "Reached"
-    sponser_name = request.form.get("Sponser")
+    tour_id = request.form.get("tourId")
     print('---------------------------------------'
           '----------------------------------------'
           '----------------------------------')
-    print('Sponser ', str(sponser_name))
+    print('Deleteting tourid ', str(tour_id))
     print('-------------------------------------------'
           '--------------------------------------------'
           '--------------------------')
 
+    cmd = """DELETE FROM Tournament where TourID = :tourid"""
+    g.conn.execute(text(cmd), tourid=tour_id)
+    return redirect("/")
+
+@app.route("/tournament_update", methods=['POST'])
+def tournament_update():
+    # print "Reached"
+    sponser_name = request.form.get("Sponser")
+    tourn_year = request.form.get("Year")
+    print('---------------------------------------'
+          '----------------------------------------'
+          '----------------------------------')
+    print('Sponser ', str(sponser_name))
+    print('Year', tourn_year)
+    print('-------------------------------------------'
+          '--------------------------------------------'
+          '--------------------------')
+
+    if len(tourn_year) != 0:
+        if int(tourn_year) <= 2019:
+            flash("Tournament has finished. Please consider sponsoring in the future ")
+            return redirect("/")
+
     if len(sponser_name)== 0:
         flash("Enter a valid tournament name, greater than 0 characters")
     else:
-
         cmd = """SELECT * FROM tournament ORDER BY TourID DESC LIMIT 1"""
         tournament_cursor = g.conn.execute(text(cmd))
         for row in tournament_cursor:
             curr_id = row[0] + 1
-            tournament_year = row[2] + 1
+            if len(tourn_year) == 0:
+                tournament_year = row[2] + 1
+            else:
+                tournament_year = tourn_year
             sponser = sponser_name
             tournament_name = sponser + ' IPL'
-            print('---------------------------------------'
-                  '----------------------------------------'
-                  '----------------------------------')
-            print("Information is ", curr_id, tournament_year, sponser, tournament_name)
-            print('---------------------------------------'
-                  '----------------------------------------'
-                  '----------------------------------')
-            cmd = """INSERT INTO Tournament(TourID, Name, Year, SponsorName)
-                            VALUES (:tourid, :tourname, :touryear, :sponsor)"""
-            g.conn.execute(text(cmd), tourid=curr_id, tourname=tournament_name,
-                           touryear=tournament_year, sponsor=sponser)
-            flash("Tournament Created")
+        print('---------------------------------------'
+              '----------------------------------------'
+              '----------------------------------')
+        print("Information is ", curr_id, tournament_year, sponser, tournament_name)
+        print('---------------------------------------'
+              '----------------------------------------'
+              '----------------------------------')
+        cmd = """INSERT INTO Tournament(TourID, Name, Year, SponsorName)
+                        VALUES (:tourid, :tourname, :touryear, :sponsor)"""
+        g.conn.execute(text(cmd), tourid=curr_id, tourname=tournament_name,
+                       touryear=tournament_year, sponsor=sponser)
+        flash("Tournament Created")
 
     return redirect("/")
 

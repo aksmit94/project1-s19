@@ -74,6 +74,10 @@
                           <label>Enter the new Sponser Name</label>
                           <input type = "text" name = "Sponser" />
                         </p>
+                        <p>
+                          <label>Enter the Year</label>
+                          <input type = "text" name = "Year" />
+                        </p>
                     </fieldset>
                     <input type="submit" value="Submit" class="btn btn-success">
                 </form>
@@ -90,8 +94,9 @@
                     <thead>
                         <tr>
                             <th scope="col">Year</th>
-                            <th scope="col">Sponser Name</th>
                             <th scope="col">Tournament Name</th>
+                            <th scope="col">Sponser Name</th>
+                            <th scope="col">Option</th>
                         </tr>
                     </thead>
                     <tbody align="center">
@@ -101,6 +106,17 @@
                                 <td>&nbsp  {{ tournament[key][1] }}</td>
                                 <td> {{ tournament[key][0] }}</td>
                                 <td> {{ tournament[key][2] }}</td>
+                                {% if  tournament[key][1] > 2019 %}
+                                    <td>
+                                        <form action="/tournament_delete" method="POST">
+                                            <button value={{key}} onclick="location.href='/tournament_delete'">Delete</button>
+                                            <input id="tourId" name="tourId" type="hidden" value="{{key}}">
+                                        </form>
+                                    </td>
+
+                                {% else %}
+                                <td>Delete</td>
+                                {% endif %}
 
                             </tr>
                         {% endfor %}
