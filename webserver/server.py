@@ -145,7 +145,7 @@ def teardown_request(exception):
 #     {% endfor %}
 #
 @app.route('/')
-def index():
+def index(players=[], tab="teams"):
     """
     request is a special object that Flask provides to access web request information:
 
@@ -488,7 +488,6 @@ def index():
 
         last_matches = collections.OrderedDict()
         for result in last_matches_cursor:
-            print(result)
             last_matches[result[0]] = [result[1], result[2], result[3], result[4]]
         last_matches_cursor.close()
 
@@ -544,10 +543,6 @@ def index():
             matches[j] = result[1]
         matches_cursor.close()
 
-        # matches = collections.OrderedDict(sorted(matches.items()))
-
-        print(matches)
-
         plot = figure(plot_height=500,title="Performance of {} per match".format(fav_team_name))
 
         x = list(matches.keys())
@@ -561,24 +556,71 @@ def index():
         matches_plot_script, matches_plot_div = components(plot)
         ########################################################
 
-        context = dict()
-        context['name'] = session['username']
-        context['tid'] = session['tid']
-
+        #######################################################
+        # Admin page tournament list
         tournament_cursor = g.conn.execute("select * from tournament")
         tournament_dict = {}
         for tourn in tournament_cursor:
             tournament_dict[tourn[0]] = [tourn[1], tourn[2], tourn[3]]
         tournament_cursor.close()
+        #######################################################
+
+        #######################################################
+        # Players tab search
+
+        #######################################################
+
+        context = dict()
+        context['name'] = session['username']
+        context['tid'] = session['tid']
 
         if session['admin']:
             return render_template("adminfile.html", data=context, users=user_dict, tournament=tournament_dict)
         else:
-            return render_template("anotherfile.html", data=context, rankings=rankings, last_matches=last_matches,
+            return render_template("anotherfile.html", tab=tab, data=context, rankings=rankings, last_matches=last_matches,
                                    wld_plot_script=wld_plot_script, wld_plot_div=wld_plot_div,
                                    top_batsmen=top_batsmen, top_bowlers=top_bowlers,
                                    team_comp_plot_script=team_comp_plot_script, team_comp_plot_div=team_comp_plot_div,
-                                   matches_plot_script=matches_plot_script, matches_plot_div=matches_plot_div)
+                                   matches_plot_script=matches_plot_script, matches_plot_div=matches_plot_div,
+                                   players=players)
+
+
+@app.route('/', methods=['POST'])
+def player_search():
+    # Get search term
+    search_term = request.form['player']
+    player_names = []
+
+    # If empty string in search, raise error
+    if not search_term:
+        too_broad_msg = 'No search query entered'
+        flash(too_broad_msg)
+    else:
+        # Do contains search in players relation
+        cmd = """
+                SELECT  name
+                FROM    Players
+                WHERE   name ILIKE :search_term
+                """
+        search_cursor_count = g.conn.execute(text(cmd), search_term=('%' + search_term + '%')).rowcount
+
+        # If too many results, again raise error
+        if search_cursor_count > 20:
+            too_broad_msg = 'Search too broad. Be more specific'
+            flash(too_broad_msg)
+        # If no result, raise error
+        elif search_cursor_count == 0:
+            no_player_msg = 'No player found'
+            flash(no_player_msg)
+        else:
+            search_results = g.conn.execute(text(cmd), search_term=('%' + search_term + '%'))
+
+            for name in search_results:
+                player_names.append(name[0])
+
+            player_names.sort()
+
+    return index(player_names, 'players')
 
 
 @app.route('/login', methods=['POST'])
@@ -588,7 +630,12 @@ def login():
     session['password'] = request.form['password']
 
     # Check if username exists in Database (case sensitive)
-    cursor = g.conn.execute("SELECT name, password, admin_flag, tid FROM Users WHERE name = %s", (session['username']))
+    cmd = """
+            SELECT  name, password, admin_flag, tid
+            FROM    Users
+            WHERE   name = :username
+            """
+    cursor = g.conn.execute(text(cmd), username=session['username'])
 
     if cursor.rowcount == 0:
         # Create username not found string
@@ -616,7 +663,8 @@ def login():
             session['tid'] = db_user['tid']
         else:
             flash('wrong password!')
-    return index()
+
+    return redirect('/')
 
 
 @app.route('/logout')

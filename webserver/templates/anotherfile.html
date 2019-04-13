@@ -15,6 +15,27 @@
         <script src="https://cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.js"></script>
         <script src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.js"></script>
 
+        <!-- JQuery and Bootstrap Javascript -->
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css">
+
+        <!-- Script -->
+        <script>
+            $(function(){
+                        var hash = window.location.hash;
+                        hash && $('ul.nav a[href="' + hash + '"]').tab('show');
+
+                        $('.nav-tabs a').click(function (e) {
+                            $(this).tab('show');
+                            var scrollmem = $('body').scrollTop() || $('html').scrollTop();
+                            window.location.hash = this.hash;
+                        });
+            });
+        </script>
+
     </head>
 
     <body>
@@ -24,6 +45,12 @@
                 <img src="/static/logos/{{data['tid']}}.png" width="40" height="40" class="d-inline-block align-top" alt="">
                 &nbsp Welcome, {{data['name']}}!
             </a>
+
+            <!-- Nav tabs -->
+            <div class="nav nav-tabs" id="nav-tab" role="tablist">
+                <a {% if tab=='teams' %} class="nav-item nav-link active" {% else %} class="nav-item nav-link" {% endif %} id="nav-team-tab" data-toggle="tab" href="#team_view" role="tab" aria-controls="team_view" aria-selected="true">Team</a>
+                <a {% if tab=='players' %} class="nav-item nav-link active" {% else %} class="nav-item nav-link" {% endif %} id="nav-player-tab" data-toggle="tab" href="#player_view" role="tab" aria-controls="player_view" aria-selected="false">Players</a>
+            </div>
 
             <ul class="nav justify-content-end">
                 <li class="nav-item">
@@ -36,165 +63,207 @@
 
         </nav>
 
-        <div class="row">
-            <div class="span8" style="padding-left:20px; background-color:azure">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th scope="col">Team</th>
-                            <th scope="col">Rank</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for rank, team in rankings.iteritems() %}
-                            {% if team[0] == data['tid'] %}
-                            <tr class="table-primary">
-                            {% else %}
-                            <tr>
-                            {% endif %}
-                                <td>
-                                    <img src="/static/logos/{{team[0]}}.png" width="30" height="30" class="d-inline-block align-top" alt="">
-                                    &nbsp {{ team[1] }}
-                                </td>
-                                <td>{{ rank }}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        <!-- Tab panes -->
+        <div class="tab-content" id="nav-tabContent">
+              <div {% if tab=='teams' %} class="tab-pane fade show active" {% else %} class="tab-pane fade" {% endif %} id="team_view" role="tabpanel" aria-labelledby="nav-team-tab">
+                    <div class="row">
+                        <div class="span8" style="padding-left:20px; background-color:azure">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Team</th>
+                                        <th scope="col">Rank</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for rank, team in rankings.iteritems() %}
+                                        {% if team[0] == data['tid'] %}
+                                        <tr class="table-primary">
+                                        {% else %}
+                                        <tr>
+                                        {% endif %}
+                                            <td>
+                                                <img src="/static/logos/{{team[0]}}.png" width="30" height="30" class="d-inline-block align-top" alt="">
+                                                &nbsp {{ team[1] }}
+                                            </td>
+                                            <td>{{ rank }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
 
-            <!-- Division for WLD plot -->
-            <div class="span4" style="margin-left:75px;">
-                {{ wld_plot_div | safe }}
-            </div>
+                        <!-- Division for WLD plot -->
+                        <div class="span4" style="margin-left:75px;">
+                            {{ wld_plot_div | safe }}
+                        </div>
 
-            <div class="span8" style="margin-left:115px;">
-                <div class="row" style="background-color:oldlace; padding:10px;">
-                    <!-- Top Batsmen table-->
-                    <p class="" style="padding-top:5px;">Top 3 Performers with the bat</p>
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th scope="col">Name</th>
-                                <th scope="col">Country</th>
-                                <th scope="col">Runs</th>
-                                <th scope="col">Percentage Runs</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for pid, data in top_batsmen.iteritems() %}
+                        <div class="span8" style="margin-left:115px;">
+                            <div class="row" style="background-color:oldlace; padding:10px;">
+                                <!-- Top Batsmen table-->
+                                <p class="" style="padding-top:5px;">Top 3 Performers with the bat</p>
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Name</th>
+                                            <th scope="col">Country</th>
+                                            <th scope="col">Runs</th>
+                                            <th scope="col">Percentage Runs</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for pid, data in top_batsmen.iteritems() %}
+                                            <tr>
+                                                <td>
+                                                    {{ data[0] }}
+                                                </td>
+                                                <td>
+                                                    {{ data[3] }}
+                                                </td>
+                                                <td>
+                                                    {{ data[1] }}
+                                                </td>
+                                                <td>
+                                                    {% print("{0:.2f}".format(data[2])) %}%
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="row" style="margin-top: 10px; background-color:oldlace; padding:10px">
+                                <!-- Top Bowlers table-->
+                                <p class="" style="padding-top:5px;">Top 3 Performers with the ball</p>
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Name</th>
+                                            <th scope="col">Country</th>
+                                            <th scope="col">Wickets</th>
+                                            <th scope="col">Percentage Wickets</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for pid, data in top_bowlers.iteritems() %}
+                                            <tr>
+                                                <td>
+                                                    {{ data[0] }}
+                                                </td>
+                                                <td>
+                                                    {{ data[3] }}
+                                                </td>
+                                                <td>
+                                                    {{ data[1] }}
+                                                </td>
+                                                <td>
+                                                    {% print("{0:.2f}".format(data[2])) %}%
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <hr>
+
+                    <div class="row">
+                        <!-- Division for Team Comp plot -->
+                        <div class="span6" style="padding-left:20px;">
+                            {{ team_comp_plot_div | safe }}
+                        </div>
+
+                        <!-- Division for last matches table-->
+                        <div class="span6" style="margin-left:100px;">
+                            <p class="" style="padding-top:5px;">Last 5 matches</p>
+                            <div style="height:20px; width:200px; display: inline-flex">
+                                <div style="height:10px; width:10px; margin:5px; background-color: #B1DFBB;"></div>
+                                <p>Won</p>
+                                &nbsp
+                                &nbsp
+                                &nbsp
+                                &nbsp
+                                <div style="height:10px; width:10px; margin:5px; background-color: #F5C6CB;"></div>
+                                <p>Lost</p>
+                            <!-- Replace "#FF850A" to change the color -->
+                            </div>
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Opposition</th>
+                                        <th scope="col">Venue</th>
+                                        <th scope="col">Stage</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for mid, data in last_matches.iteritems() %}
+                                        {% if data[1] == "won" %}
+                                            <tr class="table-success">
+                                        {% else %}
+                                            <tr class="table-danger">
+                                        {% endif %}
+                                            <td>
+                                                {{ data[0] }}
+                                            </td>
+                                            <td>
+                                                {{ data[2] }}
+                                            </td>
+                                            <td>
+                                                {{ data[3] }}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Division for WLD plot -->
+                        <div class="span4" style="margin-left:100px;">
+                            {{ matches_plot_div | safe }}
+                        </div>
+
+                    </div>
+              </div>
+              <div {% if tab=='players' %} class="tab-pane fade show active" {% else %} class="tab-pane fade show active" {% endif %} id="player_view" role="tabpanel" aria-labelledby="nav-player-tab">
+
+                  <!-- Search form -->
+                  <div id="search_form" style="padding:10px">
+                      <form class="form-inline active-cyan-3 active-cyan-4" action="/" method="POST">
+                          <i class="fas fa-search" aria-hidden="true"></i>
+                          <input class="form-control form-control-sm ml-3 w-75" type="text" name="player" placeholder="Search Player" aria-label="Search">
+                      </form>
+                  </div>
+
+                  <!--Flash messages-->
+                  <div class="flash-message" style="padding:10px;">
+                      {% with messages = get_flashed_messages() %}
+                        {% if messages %}
+                            {% for message in messages %}
+                                {{ message }}
+                            {% endfor %}
+                        {% endif %}
+                      {% endwith %}
+                  </div>
+
+                  <!-- Player Search Table -->
+                  <div class="span8" style="padding-left:20px;">
+                      <table class="table table-borderless">
+                          <tbody>
+                          {% for player in players %}
                                 <tr>
                                     <td>
-                                        {{ data[0] }}
-                                    </td>
-                                    <td>
-                                        {{ data[3] }}
-                                    </td>
-                                    <td>
-                                        {{ data[1] }}
-                                    </td>
-                                    <td>
-                                        {% print("{0:.2f}".format(data[2])) %}%
+                                        {{ player }}
                                     </td>
                                 </tr>
-                            {% endfor %}
+                          {% endfor %}
                         </tbody>
                     </table>
-                </div>
+                  </div>
 
-                <div class="row" style="margin-top: 10px; background-color:oldlace; padding:10px">
-                    <!-- Top Bowlers table-->
-                    <p class="" style="padding-top:5px;">Top 3 Performers with the ball</p>
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th scope="col">Name</th>
-                                <th scope="col">Country</th>
-                                <th scope="col">Wickets</th>
-                                <th scope="col">Percentage Wickets</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for pid, data in top_bowlers.iteritems() %}
-                                <tr>
-                                    <td>
-                                        {{ data[0] }}
-                                    </td>
-                                    <td>
-                                        {{ data[3] }}
-                                    </td>
-                                    <td>
-                                        {{ data[1] }}
-                                    </td>
-                                    <td>
-                                        {% print("{0:.2f}".format(data[2])) %}%
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-        </div>
-
-        <hr>
-
-        <div class="row">
-            <!-- Division for Team Comp plot -->
-            <div class="span6" style="padding-left:20px;">
-                {{ team_comp_plot_div | safe }}
-            </div>
-
-            <!-- Division for last matches table-->
-            <div class="span6" style="margin-left:100px;">
-                <p class="" style="padding-top:5px;">Last 5 matches</p>
-                <div style="height:20px; width:200px; display: inline-flex">
-                    <div style="height:10px; width:10px; margin:5px; background-color: #B1DFBB;"></div>
-                    <p>Won</p>
-                    &nbsp
-                    &nbsp
-                    &nbsp
-                    &nbsp
-                    <div style="height:10px; width:10px; margin:5px; background-color: #F5C6CB;"></div>
-                    <p>Lost</p>
-                <!-- Replace "#FF850A" to change the color -->
-                </div>
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th scope="col">Opposition</th>
-                            <th scope="col">Venue</th>
-                            <th scope="col">Stage</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for mid, data in last_matches.iteritems() %}
-                            {% if data[1] == "won" %}
-                                <tr class="table-success">
-                            {% else %}
-                                <tr class="table-danger">
-                            {% endif %}
-                                <td>
-                                    {{ data[0] }}
-                                </td>
-                                <td>
-                                    {{ data[2] }}
-                                </td>
-                                <td>
-                                    {{ data[3] }}
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Division for WLD plot -->
-            <div class="span4" style="margin-left:100px;">
-                {{ matches_plot_div | safe }}
-            </div>
-
+              </div>
         </div>
 
     </body>
