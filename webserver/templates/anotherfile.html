@@ -227,11 +227,11 @@
 
                     </div>
               </div>
-              <div {% if tab=='players' %} class="tab-pane fade show active" {% else %} class="tab-pane fade show active" {% endif %} id="player_view" role="tabpanel" aria-labelledby="nav-player-tab">
+              <div {% if tab=='players' %} class="tab-pane fade show active" {% else %} class="tab-pane fade" {% endif %} id="player_view" role="tabpanel" aria-labelledby="nav-player-tab">
 
                   <!-- Search form -->
-                  <div id="search_form" style="padding:10px">
-                      <form class="form-inline active-cyan-3 active-cyan-4" action="/" method="POST">
+                  <div id="search_form" style="padding-top:10px; margin-left:40%; width:500px">
+                      <form class="form-inline active-cyan-3 active-cyan-4" action="/player_search" method="POST">
                           <i class="fas fa-search" aria-hidden="true"></i>
                           <input class="form-control form-control-sm ml-3 w-75" type="text" name="player" placeholder="Search Player" aria-label="Search">
                       </form>
@@ -248,20 +248,48 @@
                       {% endwith %}
                   </div>
 
-                  <!-- Player Search Table -->
-                  <div class="span8" style="padding-left:20px; width:350px;">
-                      <table class="table table-borderless">
-                          <tbody>
-                          {% for player in players %}
-                                <tr>
-                                    <td>
-                                        {{ player }}
+                  {% if players %}
+                      <!-- Player Search Table -->
+                      <div class="span8" style="padding-left:20px; width:350px;">
+                          <table class="table table-borderless">
+                              <tbody>
+                              {% for player in players %}
+                                    <tr>
+                                        <td>
+                                            {{ player[1] }}
+                                        </td>
+                                        <td>
+                                        <form action="/player_info" method="POST">
+                                            <button value={{player[0]}}">View Info</button>
+                                            <input id="pid" name="pid" type="hidden" value="{{player[0]}}">
+                                        </form>
                                     </td>
-                                </tr>
-                          {% endfor %}
-                        </tbody>
-                    </table>
-                  </div>
+                                  </tr>
+                              {% endfor %}
+                            </tbody>
+                        </table>
+                      </div>
+                  {% endif %}
+
+                  {% if pinfo %}
+                    <div class="span8" style="padding-left:20px; width:350px; background-color:azure">
+                        <p>{{ pinfo['name'] }}</p>
+                        <table class="table table-hover">
+                            <tbody>
+                                {% for attribute, value in pinfo.iteritems() %}
+                                    <tr>
+                                        <td>
+                                            {{ attribute }}
+                                        </td>
+                                        <td>
+                                            {{ value }}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                  {% endif %}
 
               </div>
         </div>

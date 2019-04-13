@@ -144,8 +144,8 @@ def teardown_request(exception):
 #     <div>{{n}}</div>
 #     {% endfor %}
 #
-@app.route('/')
-def index(players=[], tab="teams"):
+@app.route('/', methods=['GET', 'POST'])
+def index(tab="teams", players=[], pinfo=collections.OrderedDict()):
     """
     request is a special object that Flask provides to access web request information:
 
@@ -566,7 +566,8 @@ def index(players=[], tab="teams"):
         #######################################################
 
         #######################################################
-        # Players tab search
+        # Players info
+
 
         #######################################################
 
@@ -582,14 +583,17 @@ def index(players=[], tab="teams"):
                                    top_batsmen=top_batsmen, top_bowlers=top_bowlers,
                                    team_comp_plot_script=team_comp_plot_script, team_comp_plot_div=team_comp_plot_div,
                                    matches_plot_script=matches_plot_script, matches_plot_div=matches_plot_div,
-                                   players=players)
+                                   players=players, pinfo=pinfo)
 
 
-@app.route('/', methods=['POST'])
+@app.route('/player_search', methods=['POST'])
 def player_search():
+
+    player_names = []
+    pinfo = collections.OrderedDict()
+
     # Get search term
     search_term = request.form['player']
-    player_names = []
 
     # If empty string in search, raise error
     if not search_term:
@@ -598,7 +602,7 @@ def player_search():
     else:
         # Do contains search in players relation
         cmd = """
-                SELECT  name
+                SELECT  pid, name
                 FROM    Players
                 WHERE   name ILIKE :search_term
                 """
@@ -616,11 +620,59 @@ def player_search():
             search_results = g.conn.execute(text(cmd), search_term=('%' + search_term + '%'))
 
             for name in search_results:
-                player_names.append(name[0])
+                player_names.append([name[0], name[1]])
 
             player_names.sort()
 
-    return index(player_names, 'players')
+    return index('players', player_names, pinfo)
+
+
+@app.route('/player_info', methods=['POST'])
+def player_info():
+
+    pinfo = collections.OrderedDict()
+    player_names = []
+
+    print("PID is {}".format(request.form['pid']))
+
+    pid = request.form['pid']
+
+    if pid:
+        tab = "players"
+
+    cmd = """
+            SELECT  a.name, a.age,
+                    a.runs, a.wickets,
+                    b.name, a.since,
+                    a.country
+            FROM    Players a,
+                    Teams b
+            WHERE   a.tid = b.tid
+            AND     a.pid = :pid
+            """
+    player_info_cursor = g.conn.execute(text(cmd), pid=int(pid))
+
+    print(pinfo)
+
+    for info in player_info_cursor:
+        pinfo['name'] = info[0]
+        pinfo['age'] = info[1]
+        pinfo['country'] = info[6]
+        pinfo['team'] = info[4]
+        pinfo['since'] = info[5]
+        pinfo['runs'] = info[2]
+        pinfo['wickets'] = info[3]
+
+        # Define primary role
+        if pinfo['runs'] > 3000:
+            if pinfo['wickets'] < 100:
+                pinfo['role'] = "Batsman"
+            else:
+                pinfo['role'] = "All-rounder"
+        else:
+            pinfo['role'] = "Bowler"
+
+    return index('players', player_names, pinfo)
 
 
 @app.route('/login', methods=['POST'])
