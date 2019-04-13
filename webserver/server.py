@@ -644,15 +644,18 @@ def player_info():
             SELECT  a.name, a.age,
                     a.runs, a.wickets,
                     b.name, a.since,
-                    a.country
-            FROM    Players a,
+                    a.country, COALESCE(c.name, 'NONE')
+            FROM    Players a
+            INNER JOIN
                     Teams b
-            WHERE   a.tid = b.tid
-            AND     a.pid = :pid
+            ON      a.tid = b.tid
+            LEFT JOIN
+                    Award c
+            ON      a.pid = c.pid
+            WHERE   a.pid = :pid
             """
     player_info_cursor = g.conn.execute(text(cmd), pid=int(pid))
 
-    print(pinfo)
 
     for info in player_info_cursor:
         pinfo['name'] = info[0]
@@ -662,7 +665,7 @@ def player_info():
         pinfo['since'] = info[5]
         pinfo['runs'] = info[2]
         pinfo['wickets'] = info[3]
-
+        pinfo['award'] = info[7]
         # Define primary role
         if pinfo['runs'] > 3000:
             if pinfo['wickets'] < 100:
@@ -671,6 +674,8 @@ def player_info():
                 pinfo['role'] = "All-rounder"
         else:
             pinfo['role'] = "Bowler"
+
+    print(pinfo)
 
     return index('players', player_names, pinfo)
 
