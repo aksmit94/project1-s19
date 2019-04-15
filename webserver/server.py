@@ -145,7 +145,7 @@ def teardown_request(exception):
 #     {% endfor %}
 #
 @app.route('/', methods=['GET', 'POST'])
-def index(tab="teams", players=[], pinfo=collections.OrderedDict()):
+def index(tab="teams", players=[], pinfo=collections.OrderedDict(), curr_tid=-1):
     """
     request is a special object that Flask provides to access web request information:
 
@@ -162,6 +162,10 @@ def index(tab="teams", players=[], pinfo=collections.OrderedDict()):
     if not session.get('logged_in'):
         return render_template('landing.html')
     else:
+
+        if curr_tid == -1:
+            curr_tid = int(session['tid'])
+
         ########################################################
         # Ranking table
         rank_cursor = g.conn.execute(""" SELECT  a.tid, a.name, b.rank 
@@ -174,8 +178,8 @@ def index(tab="teams", players=[], pinfo=collections.OrderedDict()):
             rankings[result[2]] = [result[0], result[1]]
 
             # Store fav team name for future reference
-            if result[0] == session['tid']:
-                fav_team_name = result[1]
+            if result[0] == curr_tid:
+                team_name = result[1]
         rank_cursor.close()
 
         user_cursor = g.conn.execute(""" SELECT  userid, name 
@@ -329,7 +333,7 @@ def index(tab="teams", players=[], pinfo=collections.OrderedDict()):
                             SELECT  COUNT(*) AS total
                             FROM    away_matches
                         ) c """
-        wld_cursor = g.conn.execute(text(cmd), tid=int(session['tid']))
+        wld_cursor = g.conn.execute(text(cmd), tid=curr_tid)
 
         win_loss_draw = dict()
         for result in wld_cursor:
@@ -349,7 +353,7 @@ def index(tab="teams", players=[], pinfo=collections.OrderedDict()):
         source = ColumnDataSource(data=wld_data)
 
         p = figure(x_range=venues, y_range=(0, 20), plot_height=500,
-                   title="Performance of {} over venues".format(fav_team_name))
+                   title="Performance of {} over venues".format(team_name))
 
         p.vbar(x=dodge('venue', -0.125, range=p.x_range), top='wins', width=0.2, source=source,
                color="#c9d9d3", legend=value("Wins"))
@@ -381,7 +385,7 @@ def index(tab="teams", players=[], pinfo=collections.OrderedDict()):
                     WHERE   tid = :tid
                     ORDER BY runs DESC
                     LIMIT 3 """
-        bat_cursor = g.conn.execute(text(cmd), tid=session['tid'])
+        bat_cursor = g.conn.execute(text(cmd), tid=curr_tid)
 
         top_batsmen = collections.OrderedDict()
         for result in bat_cursor:
@@ -394,7 +398,7 @@ def index(tab="teams", players=[], pinfo=collections.OrderedDict()):
                     WHERE   tid = :tid
                     ORDER BY wickets DESC
                     LIMIT 3 """
-        bowl_cursor = g.conn.execute(text(cmd), tid=session['tid'])
+        bowl_cursor = g.conn.execute(text(cmd), tid=curr_tid)
 
         top_bowlers = collections.OrderedDict()
         for result in bowl_cursor:
@@ -409,7 +413,7 @@ def index(tab="teams", players=[], pinfo=collections.OrderedDict()):
                     WHERE   tid = :tid
                     GROUP BY country
                     ORDER BY count(*) DESC  """
-        team_comp_cursor = g.conn.execute(text(cmd), tid=int(session['tid']))
+        team_comp_cursor = g.conn.execute(text(cmd), tid=curr_tid)
 
         team_comp = dict()
         for result in team_comp_cursor:
@@ -478,7 +482,7 @@ def index(tab="teams", players=[], pinfo=collections.OrderedDict()):
                 ORDER BY mid DESC
                 LIMIT 5 """
 
-        last_matches_cursor = g.conn.execute(text(cmd), tid=session['tid'])
+        last_matches_cursor = g.conn.execute(text(cmd), tid=curr_tid)
 
         last_matches = collections.OrderedDict()
         for result in last_matches_cursor:
@@ -527,7 +531,7 @@ def index(tab="teams", players=[], pinfo=collections.OrderedDict()):
                 FROM	wins_losses
                 ORDER BY mid """
 
-        matches_cursor = g.conn.execute(text(cmd), tid=session['tid'])
+        matches_cursor = g.conn.execute(text(cmd), tid=curr_tid)
 
         matches = collections.OrderedDict()
         j = 0
@@ -537,7 +541,7 @@ def index(tab="teams", players=[], pinfo=collections.OrderedDict()):
             matches[j] = result[1]
         matches_cursor.close()
 
-        plot = figure(plot_height=500,title="Performance of {} per match".format(fav_team_name))
+        plot = figure(plot_height=500,title="Performance of {} per match".format(team_name))
 
         x = list(matches.keys())
         y = [matches[i] for i in list(matches.keys())]
@@ -568,6 +572,7 @@ def index(tab="teams", players=[], pinfo=collections.OrderedDict()):
         context = dict()
         context['name'] = session['username']
         context['tid'] = session['tid']
+        context['selected_tid'] = curr_tid
 
         if session['admin']:
             return render_template("adminfile.html", data=context, users=user_dict, tournament=tournament_dict)
@@ -578,6 +583,14 @@ def index(tab="teams", players=[], pinfo=collections.OrderedDict()):
                                    team_comp_plot_script=team_comp_plot_script, team_comp_plot_div=team_comp_plot_div,
                                    matches_plot_script=matches_plot_script, matches_plot_div=matches_plot_div,
                                    players=players, pinfo=pinfo)
+
+
+@app.route('/change_view', methods=['POST'])
+def change_view():
+
+    selected_tid = int(request.form['tid'])
+
+    return index(curr_tid=selected_tid)
 
 
 @app.route('/player_search', methods=['POST'])
@@ -618,7 +631,7 @@ def player_search():
 
             player_names.sort()
 
-    return index('players', player_names, pinfo)
+    return index('players', player_names, pinfo, int(session['tid']))
 
 
 @app.route('/player_info', methods=['POST'])
@@ -650,7 +663,6 @@ def player_info():
             """
     player_info_cursor = g.conn.execute(text(cmd), pid=int(pid))
 
-
     for info in player_info_cursor:
         pinfo['name'] = info[0]
         pinfo['age'] = info[1]
@@ -671,7 +683,7 @@ def player_info():
 
     print(pinfo)
 
-    return index('players', player_names, pinfo)
+    return index('players', player_names, pinfo, curr_tid=int(session['tid']))
 
 
 @app.route('/login', methods=['POST'])
@@ -728,7 +740,7 @@ def logout():
 
 @app.route('/profile')
 def profile():
-    team_cursor = g.conn.execute("SELECT tid, name FROM teams ORDER BY tid")
+    team_cursor = g.conn.execute("SELECT tid, name FROM teams WHERE tid < 9 ORDER BY tid")
     teams = dict()
     for result in team_cursor:
         teams[result['tid']] = result['name']
@@ -774,7 +786,7 @@ def profile_update():
 def signup():
 
     # Get team list to populate dropdown
-    team_cursor = g.conn.execute("SELECT tid, name FROM teams ORDER BY tid")
+    team_cursor = g.conn.execute("SELECT tid, name FROM teams WHERE tid < 9 ORDER BY tid")
     teams = dict()
     for result in team_cursor:
         teams[result['tid']] = result['name']
@@ -800,7 +812,8 @@ def user_update():
 
     cmd = """DELETE FROM Users where userid = :user_id"""
     g.conn.execute(text(cmd), user_id=user)
-    return redirect("/")
+    # return redirect("/")
+    return index(curr_tid=int(session['tid']))
 
 
 @app.route("/tournament_delete", methods=['POST'])
@@ -817,7 +830,9 @@ def tournament_delete():
 
     cmd = """DELETE FROM Tournament where TourID = :tourid"""
     g.conn.execute(text(cmd), tourid=tour_id)
-    return redirect("/")
+    # return redirect("/")
+    return index(curr_tid=int(session['tid']))
+
 
 @app.route("/tournament_update", methods=['POST'])
 def tournament_update():
@@ -833,10 +848,27 @@ def tournament_update():
           '--------------------------------------------'
           '--------------------------')
 
+    try:
+        int(tourn_year)
+    except Exception:
+        flash("Enter a valid year")
+        return index(curr_tid=int(session['tid']))
+
     if len(tourn_year) != 0:
         if int(tourn_year) <= 2019:
             flash("Tournament has finished. Please consider sponsoring in the future ")
-            return redirect("/")
+            return index(curr_tid=int(session['tid']))
+        else:
+            cmd = """
+                    SELECT  year 
+                    FROM    tournament 
+                    WHERE   year = :year
+                    """
+            year_check_cursor = g.conn.execute(text(cmd), year=tourn_year)
+
+            if year_check_cursor.rowcount:
+                flash("Tournament already has a sponsor")
+                return index(curr_tid=int(session['tid']))
 
     if len(sponser_name)== 0:
         flash("Enter a valid tournament name, greater than 0 characters")

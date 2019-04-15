@@ -41,7 +41,7 @@
     <body>
 
         <nav class="navbar navbar-light" style="background-color: #e3f2fd;">
-            <a class="navbar-brand" href="#">
+            <a class="navbar-brand" href="/">
                 <img src="/static/logos/{{data['tid']}}.png" width="40" height="40" class="d-inline-block align-top" alt="">
                 &nbsp Welcome, {{data['name']}}!
             </a>
@@ -75,16 +75,18 @@
                                         <th scope="col">Rank</th>
                                     </tr>
                                 </thead>
-                                <tbody>
                                     {% for rank, team in rankings.iteritems() %}
-                                        {% if team[0] == data['tid'] %}
+                                        {% if team[0] == data['selected_tid'] %}
                                         <tr class="table-primary">
                                         {% else %}
                                         <tr>
                                         {% endif %}
                                             <td>
-                                                <img src="/static/logos/{{team[0]}}.png" width="30" height="30" class="d-inline-block align-top" alt="">
-                                                &nbsp {{ team[1] }}
+                                                <form action="/change_view" method="POST">
+                                                    <img src="/static/logos/{{team[0]}}.png" width="30" height="30" class="d-inline-block align-top" alt="">
+                                                    <button style="background:none; border:none; cursor:pointer" class="team_button">&nbsp {{ team[1] }}</button>
+                                                    <input id="tid" name="tid" type="hidden" value="{{ team[0] }}">
+                                                </form>
                                             </td>
                                             <td>{{ rank }}</td>
                                         </tr>
@@ -94,11 +96,11 @@
                         </div>
 
                         <!-- Division for WLD plot -->
-                        <div class="span4" style="margin-left:75px;">
+                        <div class="span4" style="margin-left:50px;">
                             {{ wld_plot_div | safe }}
                         </div>
 
-                        <div class="span8" style="margin-left:115px;">
+                        <div class="span8" style="margin-left:100px;">
                             <div class="row" style="background-color:oldlace; padding:10px;">
                                 <!-- Top Batsmen table-->
                                 <p class="" style="padding-top:5px;">Top 3 Performers with the bat</p>
