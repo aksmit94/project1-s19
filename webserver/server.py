@@ -159,15 +159,9 @@ def index(tab="teams", players=[], pinfo=collections.OrderedDict()):
     # DEBUG: this is debugging code to see what request looks like
     # print request.args
 
-
-
-
     if not session.get('logged_in'):
         return render_template('landing.html')
     else:
-        # cmd = "DELETE FROM Tournament where year > 2018"
-        # g.conn.execute(text(cmd))
-
         ########################################################
         # Ranking table
         rank_cursor = g.conn.execute(""" SELECT  a.tid, a.name, b.rank 
